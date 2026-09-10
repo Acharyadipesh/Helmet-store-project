@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ helmet.brand.name }} {{ helmet.name }} - HelmetHub{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'store:home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'store:helmet_list' %}">Shop</a></li>
+            <li class="breadcrumb-item active">{{ helmet.brand.name }} {{ helmet.name }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row g-5">
+        <!-- Product Images -->
+        <div class="col-lg-6">
+            <div class="card border-0 rounded-4 overflow-hidden shadow-sm">
+                <div class="bg-light d-flex align-items-center justify-content-center" style="min-height: 450px;">
+                    {% if helmet.image %}
+                    <img src="{{ helmet.image.url }}" alt="{{ helmet.name }}" class="img-fluid" style="max-height: 400px; object-fit: contain;">
+                    {% else %}
+                    <i class="fas fa-helmet-safety fa-6x text-muted"></i>
+                    {% endif %}
+                </div>
+            </div>
+            {% if helmet.images.exists %}
+            <div class="row g-2 mt-3">
+                {% for img in helmet.images.all %}
+                <div class="col-3">
+                    <div class="card border-0 rounded-3 overflow-hidden">
+                        <img src="{{ img.image.url }}" class="img-fluid" style="height: 80px; object-fit: cover;">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Product Info -->
+        <div class="col-lg-6">
+            <div class="mb-3">
+                <span class="badge bg-primary rounded-pill px-3 py-2">{{ helmet.brand.name }}</span>
+                <span class="badge bg-secondary rounded-pill px-3 py-2 ms-2">{{ helmet.get_helmet_type_display }}</span>
+            </div>
+            
+            <h1 class="fw-bold mb-3" style="font-size: 2.2rem;">{{ helmet.name }}</h1>
+            
+            <div class="d-flex align-items-center mb-3">
+                <div class="text-warning me-2">
+                    {% for i in "12345" %}
+                    <i class="fas fa-star{% if forloop.counter > avg_rating|add:0 %} text-muted{% endif %}"></i>
+                    {% endfor %}
+                </div>
+                <span class="text-muted">({{ reviews.count }} reviews)</span>
+            </div>
+            
+            <div class="mb-4">
+                <span class="fs-2 fw-bold" style="color: var(--primary);">NRs {{ helmet.get_price }}</span>
+                {% if helmet.discount_price %}
+                <span class="fs-4 text-muted text-decoration-line-through ms-2">NRs {{ helmet.price }}</span>
+                <span class="badge bg-danger ms-2">Save {{ helmet.get_discount_percentage }}%</span>
+                {% endif %}
+            </div>
+            
+            <p class="text-muted mb-4" style="font-size: 1.05rem; line-height: 1.7;">{{ helmet.description }}</p>
+            
+            <!-- Specs -->
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
+                        <i class="fas fa-ruler-combined fa-lg me-3" style="color: var(--primary);"></i>
+                        <div>
+                            <small class="text-muted d-block">Size</small>
+                            <strong>{{ helmet.get_size_display }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
+                        <i class="fas fa-weight-hanging fa-lg me-3" style="color: var(--primary);"></i>
+                        <div>
+                            <small class="text-muted d-block">Weight</small>
+                            <strong>{{ helmet.weight }} kg</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
+                        <i class="fas fa-certificate fa-lg me-3" style="color: var(--primary);"></i>
+                        <div>
+                            <small class="text-muted d-block">Certification</small>
+                            <strong>{{ helmet.get_certification_display }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
+                        <i class="fas fa-palette fa-lg me-3" style="color: var(--primary);"></i>
+                        <div>
+                            <small class="text-muted d-block">Color</small>
+                            <strong>{{ helmet.color }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Features -->
+            <div class="mb-4">
+                <h6 class="fw-bold mb-2">Features:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-light text-dark border"><i class="fas fa-wind me-1"></i>Ventilation</span>
+                    {% if helmet.bluetooth_ready %}
+                    <span class="badge bg-light text-dark border"><i class="fas fa-bluetooth-b me-1"></i>Bluetooth Ready</span>
+                    {% endif %}
+                    {% if helmet.sun_visor %}
+                    <span class="badge bg-light text-dark border"><i class="fas fa-sun me-1"></i>Sun Visor</span>
+                    {% endif %}
+                    <span class="badge bg-light text-dark border"><i class="fas fa-layer-group me-1"></i>{{ helmet.material }}</span>
+                </div>
+            </div>
+            
+            <!-- Stock -->
+            <div class="mb-4">
+                {% if helmet.stock > 0 %}
+                <span class="badge bg-success rounded-pill px-3 py-2"><i class="fas fa-check-circle me-1"></i>In Stock ({{ helmet.stock }} left)</span>
+                {% else %}
+                <span class="badge bg-danger rounded-pill px-3 py-2"><i class="fas fa-times-circle me-1"></i>Out of Stock</span>
+                {% endif %}
+            </div>
+            
+            <!-- Actions -->
+            <div class="d-flex gap-3 mb-5">
+                <a href="{% url 'store:add_to_cart' helmet.id %}" class="btn btn-hero btn-lg flex-grow-1">
+                    <i class="fas fa-shopping-cart me-2"></i>Add to Cart
+                </a>
+                <a href="{% url 'store:add_to_compare' helmet.id %}" class="btn btn-outline-dark btn-lg px-4 rounded-3">
+                    <i class="fas fa-balance-scale"></i>
+                </a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'store:add_to_wishlist' helmet.id %}" class="btn btn-outline-danger btn-lg px-4 rounded-3">
+                    <i class="far fa-heart"></i>
+                </a>
+                {% endif %}
+            </div>
+            
+            <!-- Size Guide -->
+            <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3"><i class="fas fa-ruler me-2"></i>Size Guide</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless mb-0">
+                            <thead>
+                                <tr class="text-muted">
+                                    <th>Size</th>
+                                    <th>Head Circumference</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for size, cm in size_guide.items %}
+                                <tr class="{% if size == helmet.size %}fw-bold text-primary{% endif %}">
+                                    <td>{{ size }}</td>
+                                    <td>{{ cm }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reviews Section -->
+    <div class="row mt-5">
+        <div class="col-lg-8">
+            <div class="card border-0 rounded-4 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-4">Customer Reviews</h3>
+                    
+                    {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'store:add_review' helmet.id %}" class="mb-5 p-4 rounded-4" style="background: #f8f9fa;">
+                        {% csrf_token %}
+                        <h5 class="fw-bold mb-3">Write a Review</h5>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Rating</label>
+                            <select name="rating" class="form-select" style="max-width: 150px;">
+                                <option value="5">5 Stars</option>
+                                <option value="4">4 Stars</option>
+                                <option value="3">3 Stars</option>
+                                <option value="2">2 Stars</option>
+                                <option value="1">1 Star</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Your Review</label>
+                            <textarea name="comment" class="form-control" rows="3" placeholder="Share your experience..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-hero">Submit Review</button>
+                    </form>
+                    {% endif %}
+                    
+                    {% for review in reviews %}
+                    <div class="border-bottom pb-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" 
+                                     style="width: 40px; height: 40px; font-weight: 700;">
+                                    {{ review.user.first_name|default:review.user.username|first|upper }}
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0">{{ review.user.first_name|default:review.user.username }}</h6>
+                                    <small class="text-muted">{{ review.created_at|date:"F d, Y" }}</small>
+                                </div>
+                            </div>
+                            <div class="text-warning">
+                                {% for i in "12345" %}
+                                <i class="fas fa-star{% if forloop.counter > review.rating %} text-muted{% endif %}"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0">{{ review.comment }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No reviews yet. Be the first to review!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Related Products -->
+    {% if related %}
+    <div class="mt-5">
+        <h3 class="fw-bold mb-4">You May Also Like</h3>
+        <div class="row g-4">
+            {% for h in related %}
+            <div class="col-6 col-lg-3">
+                <div class="product-card">
+                    <div class="product-img-wrapper">
+                        {% if h.image %}
+                        <img src="{{ h.image.url }}" alt="{{ h.name }}">
+                        {% else %}
+                        <i class="fas fa-helmet-safety fa-4x text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="product-body">
+                        <div class="product-brand">{{ h.brand.name }}</div>
+                        <h6 class="product-name">{{ h.name }}</h6>
+                        <div class="product-price">NRs {{ h.get_price }}</div>
+                        <a href="{% url 'store:helmet_detail' h.slug %}" class="btn btn-add-cart mt-2">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

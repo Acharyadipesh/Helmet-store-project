@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Helmet Size Finder - HelmetHub{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="section-header">
+        <h2 class="section-title">Helmet Size Finder</h2>
+        <p class="section-subtitle">Find your perfect fit in 30 seconds</p>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="size-finder-card">
+                {% if not result %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold fs-5 mb-3">
+                            <i class="fas fa-ruler me-2" style="color: var(--primary);"></i>
+                            Step 1: Measure Your Head
+                        </label>
+                        <p class="text-muted mb-3">Wrap a soft measuring tape around your head, just above your eyebrows and ears.</p>
+                        <div class="input-group input-group-lg">
+                            <input type="number" name="circumference" class="form-control" placeholder="Enter circumference in cm" 
+                                   min="50" max="70" step="0.1" required>
+                            <span class="input-group-text">cm</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold fs-5 mb-3">
+                            <i class="fas fa-motorcycle me-2" style="color: var(--primary);"></i>
+                            Step 2: What's Your Riding Style?
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check card p-3 border-2" style="cursor: pointer;">
+                                    <input class="form-check-input" type="radio" name="riding_style" value="commute" id="commute" required>
+                                    <label class="form-check-label w-100" for="commute">
+                                        <i class="fas fa-city fa-2x mb-2 d-block" style="color: var(--primary);"></i>
+                                        <strong>City Commute</strong>
+                                        <small class="d-block text-muted">Daily urban riding</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check card p-3 border-2" style="cursor: pointer;">
+                                    <input class="form-check-input" type="radio" name="riding_style" value="sport" id="sport">
+                                    <label class="form-check-label w-100" for="sport">
+                                        <i class="fas fa-tachometer-alt fa-2x mb-2 d-block" style="color: var(--primary);"></i>
+                                        <strong>Sport / Track</strong>
+                                        <small class="d-block text-muted">High speed performance</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check card p-3 border-2" style="cursor: pointer;">
+                                    <input class="form-check-input" type="radio" name="riding_style" value="touring" id="touring">
+                                    <label class="form-check-label w-100" for="touring">
+                                        <i class="fas fa-road fa-2x mb-2 d-block" style="color: var(--primary);"></i>
+                                        <strong>Touring</strong>
+                                        <small class="d-block text-muted">Long distance rides</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check card p-3 border-2" style="cursor: pointer;">
+                                    <input class="form-check-input" type="radio" name="riding_style" value="adventure" id="adventure">
+                                    <label class="form-check-label w-100" for="adventure">
+                                        <i class="fas fa-mountain fa-2x mb-2 d-block" style="color: var(--primary);"></i>
+                                        <strong>Adventure</strong>
+                                        <small class="d-block text-muted">On & off-road</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-hero btn-lg w-100">
+                        <i class="fas fa-magic me-2"></i>Find My Perfect Helmet
+                    </button>
+                </form>
+                {% else %}
+                <div class="text-center mb-5">
+                    <div class="size-result mb-4">
+                        <i class="fas fa-check-circle fa-4x mb-3"></i>
+                        <h3 class="fw-bold mb-2">Your Recommended Size</h3>
+                        <div class="display-1 fw-bold mb-2">{{ result.size }}</div>
+                        <p class="mb-0">Head Circumference: {{ result.circumference }} cm</p>
+                    </div>
+                    
+                    <div class="alert alert-info rounded-4">
+                        <h5 class="fw-bold mb-2"><i class="fas fa-lightbulb me-2"></i>Recommended Type</h5>
+                        <p class="mb-0">{{ result.description }}</p>
+                    </div>
+                    
+                    <a href="{% url 'store:helmet_list' %}?size={{ result.size }}&type={{ result.helmet_type }}" 
+                       class="btn btn-hero btn-lg">
+                        <i class="fas fa-search me-2"></i>Find Helmets in Size {{ result.size }}
+                    </a>
+                    <a href="{% url 'store:size_finder' %}" class="btn btn-outline-secondary btn-lg ms-2">
+                        <i class="fas fa-redo me-2"></i>Start Over
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- Size Chart -->
+                <div class="mt-5">
+                    <h5 class="fw-bold mb-3">Size Chart Reference</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Size</th>
+                                    <th>XS</th>
+                                    <th>S</th>
+                                    <th>M</th>
+                                    <th>L</th>
+                                    <th>XL</th>
+                                    <th>XXL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold">Head (cm)</td>
+                                    <td>53-54</td>
+                                    <td>55-56</td>
+                                    <td>57-58</td>
+                                    <td>59-60</td>
+                                    <td>61-62</td>
+                                    <td>63-64</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Head (inches)</td>
+                                    <td>20.9-21.3</td>
+                                    <td>21.7-22.0</td>
+                                    <td>22.4-22.8</td>
+                                    <td>23.2-23.6</td>
+                                    <td>24.0-24.4</td>
+                                    <td>24.8-25.2</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

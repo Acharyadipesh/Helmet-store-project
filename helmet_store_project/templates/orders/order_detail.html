@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Order #{{ order.order_id }} - HelmetHub Nepal{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center mb-3" 
+             style="width: 80px; height: 80px; font-size: 2.5rem;">
+            <i class="fas fa-check"></i>
+        </div>
+        <h2 class="fw-bold">Order Placed Successfully!</h2>
+        <p class="text-muted">Thank you for shopping with HelmetHub Nepal</p>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 rounded-4 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 class="fw-bold mb-1">Order #{{ order.order_id }}</h5>
+                            <small class="text-muted">{{ order.created_at|date:"F d, Y" }}</small>
+                        </div>
+                        <span class="badge bg-{% if order.status == 'delivered' %}success{% elif order.status == 'shipped' %}info{% elif order.status == 'cancelled' %}danger{% else %}warning{% endif %} fs-6 px-3 py-2">
+                            {{ order.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="alert alert-info rounded-4 mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{% if order.payment_method == 'cod' %}money-bill-wave{% elif order.payment_method == 'khalti' %}wallet{% else %}mobile-alt{% endif %} fa-2x me-3"></i>
+                            <div>
+                                <strong>Payment Method:</strong> {{ order.get_payment_method_display }}
+                                {% if order.payment_method == 'cod' %}
+                                <div class="small text-muted">Pay NRs {{ order.total_amount }} when your order is delivered.</div>
+                                {% else %}
+                                <div class="small text-muted">Please complete your payment to process the order.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ======== PAYMENT ACTION BLOCK ======== -->
+                    {% if not order.is_paid and order.payment_method != 'cod' %}
+                    <div class="alert alert-warning rounded-4 mb-4 border-2 border-warning">
+                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+                            <div>
+                                <i class="fas fa-exclamation-triangle fa-2x me-3 float-start"></i>
+                                <h5 class="fw-bold mb-1">Payment Required</h5>
+                                <p class="mb-0">Complete your payment to confirm the order.</p>
+                                <p class="mb-0 small text-muted">Total: <strong>NRs {{ order.total_amount }}</strong></p>
+                            </div>
+                            <a href="{% url 'orders:initiate_payment' order.order_id %}" class="btn btn-lg btn-success mt-3 mt-md-0 px-5 shadow">
+                                {% if order.payment_method == 'esewa' %}
+                                    <i class="fas fa-money-bill-wave me-2"></i>Pay with eSewa
+                                {% elif order.payment_method == 'khalti' %}
+                                    <i class="fas fa-mobile-alt me-2"></i>Pay with Khalti
+                                {% else %}
+                                    <i class="fas fa-credit-card me-2"></i>Pay Now
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+                    {% elif order.is_paid %}
+                    <div class="alert alert-success rounded-4 mb-4">
+                        <i class="fas fa-check-circle me-2"></i> 
+                        <strong>Payment Confirmed!</strong> Your order is now being processed.
+                    </div>
+                    {% endif %}
+                    <!-- ======== END PAYMENT ACTION ======== -->
+                    
+                    <hr>
+                    
+                    <h6 class="fw-bold mb-3">Items Ordered</h6>
+                    {% for item in order.items.all %}
+                    <div class="d-flex align-items-center mb-3 p-3 rounded-3" style="background: #f8f9fa;">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ item.helmet.brand.name }} {{ item.helmet.name }}</div>
+                            <small class="text-muted">Qty: {{ item.quantity }} | NRs {{ item.price }} each</small>
+                        </div>
+                        <div class="fw-bold" style="color: var(--primary);">NRs {{ item.get_subtotal }}</div>
+                    </div>
+                    {% endfor %}
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-2">Shipping Address</h6>
+                            <p class="text-muted mb-0">
+                                {{ order.full_name }}<br>
+                                {{ order.address }}<br>
+                                {{ order.city }}<br>
+                                {{ order.get_province_display }}<br>
+                                Nepal<br>
+                                Phone: {{ order.phone }}
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <h6 class="fw-bold mb-2">Order Total</h6>
+                            <div class="fs-3 fw-bold" style="color: var(--primary);">NRs {{ order.total_amount }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <a href="{% url 'store:home' %}" class="btn btn-hero btn-lg">
+                    <i class="fas fa-shopping-bag me-2"></i>Continue Shopping
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

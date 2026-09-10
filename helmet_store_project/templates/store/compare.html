@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}Compare Helmets - HelmetHub{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="fw-bold mb-4"><i class="fas fa-balance-scale me-2"></i>Helmet Comparison</h2>
+    
+    {% if helmets %}
+    <div class="table-responsive">
+        <table class="table compare-table table-bordered bg-white rounded-4 overflow-hidden">
+            <thead>
+                <tr>
+                    <th style="min-width: 150px;">Feature</th>
+                    {% for h in helmets %}
+                    <th style="min-width: 250px;">
+                        <div class="text-center">
+                            <div class="mb-2" style="height: 120px; display: flex; align-items: center; justify-content: center;">
+                                {% if h.image %}
+                                <img src="{{ h.image.url }}" alt="{{ h.name }}" style="max-height: 100px; object-fit: contain;">
+                                {% else %}
+                                <i class="fas fa-helmet-safety fa-3x text-muted"></i>
+                                {% endif %}
+                            </div>
+                            <div class="fw-bold">{{ h.brand.name }} {{ h.name }}</div>
+                            <a href="{% url 'store:remove_from_compare' h.id %}" class="btn btn-sm btn-outline-danger mt-2">
+                                <i class="fas fa-times me-1"></i>Remove
+                            </a>
+                        </div>
+                    </th>
+                    {% endfor %}
+                    {% for i in "x"|rjust:"3" %}
+                    {% if forloop.counter > helmets|length %}
+                    <th class="text-center text-muted">
+                        <i class="fas fa-plus-circle fa-3x mb-2"></i>
+                        <div>Add Helmet</div>
+                    </th>
+                    {% endif %}
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="fw-bold">Price</td>
+                    {% for h in helmets %}
+                    <td class="text-center fw-bold" style="color: var(--primary); font-size: 1.2rem;">NRs {{ h.get_price }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Type</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{{ h.get_helmet_type_display }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Size</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{{ h.get_size_display }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Weight</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{{ h.weight }} kg</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Material</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{{ h.material }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Certification</td>
+                    {% for h in helmets %}
+                    <td class="text-center"><span class="badge bg-primary">{{ h.get_certification_display }}</span></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Color</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{{ h.color }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Ventilation</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{% if h.ventilation %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Bluetooth Ready</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{% if h.bluetooth_ready %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Sun Visor</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{% if h.sun_visor %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Stock</td>
+                    {% for h in helmets %}
+                    <td class="text-center">{% if h.stock > 0 %}<span class="badge bg-success">In Stock ({{ h.stock }})</span>{% else %}<span class="badge bg-danger">Out of Stock</span>{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">Action</td>
+                    {% for h in helmets %}
+                    <td class="text-center">
+                        <a href="{% url 'store:add_to_cart' h.id %}" class="btn btn-hero btn-sm">
+                            <i class="fas fa-cart-plus me-1"></i>Add to Cart
+                        </a>
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-balance-scale fa-5x text-muted mb-3"></i>
+        <h4>No helmets to compare</h4>
+        <p class="text-muted">Add up to 3 helmets to compare side by side.</p>
+        <a href="{% url 'store:helmet_list' %}" class="btn btn-hero mt-3">Browse Helmets</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
