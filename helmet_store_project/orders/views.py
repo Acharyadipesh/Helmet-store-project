@@ -8,10 +8,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.crypto import get_random_string
 from django.conf import settings
+from django.db import transaction, IntegrityError
 from store.models import Cart
 from .models import Order, OrderItem
 
 
+# ==================== CHECKOUT ====================
 @login_required
 def checkout_view(request):
     try:
@@ -19,63 +21,91 @@ def checkout_view(request):
     except Cart.DoesNotExist:
         messages.error(request, 'Your cart is empty.')
         return redirect('store:cart_detail')
-    
+
     if not cart.items.exists():
         messages.error(request, 'Your cart is empty.')
         return redirect('store:cart_detail')
-    
+
     if request.method == 'POST':
         payment_method = request.POST.get('payment_method', 'cod')
-        
-        order = Order.objects.create(
-            user=request.user,
-            order_id=get_random_string(10).upper(),
-            payment_method=payment_method,
-            full_name=request.POST.get('full_name'),
-            email=request.POST.get('email'),
-            phone=request.POST.get('phone'),
-            address=request.POST.get('address'),
-            city=request.POST.get('city'),
-            province=request.POST.get('province'),
-            total_amount=cart.get_total(),
-        )
-        
-        for item in cart.items.all():
-            OrderItem.objects.create(
-                order=order,
-                helmet=item.helmet,
-                quantity=item.quantity,
-                price=item.helmet.get_price(),
-            )
-            item.helmet.stock -= item.quantity
-            item.helmet.save()
-        
-        cart.items.all().delete()
-        
+
+        try:
+            with transaction.atomic():
+                # Check stock before creating the order
+                for item in cart.items.all():
+                    if item.quantity > item.helmet.stock:
+                        messages.error(
+                            request,
+                            f'Sorry, only {item.helmet.stock} units of "{item.helmet.name}" are available.'
+                        )
+                        return redirect('store:cart_detail')
+
+                order = Order.objects.create(
+                    user=request.user,
+                    order_id=get_random_string(10).upper(),
+                    payment_method=payment_method,
+                    full_name=request.POST.get('full_name'),
+                    email=request.POST.get('email'),
+                    phone=request.POST.get('phone'),
+                    address=request.POST.get('address'),
+                    city=request.POST.get('city'),
+                    province=request.POST.get('province'),
+                    total_amount=cart.get_total(),
+                )
+
+                for item in cart.items.all():
+                    OrderItem.objects.create(
+                        order=order,
+                        helmet=item.helmet,
+                        quantity=item.quantity,
+                        price=item.helmet.get_price(),
+                    )
+                    item.helmet.stock -= item.quantity
+                    item.helmet.save()
+
+                cart.items.all().delete()
+
+        except IntegrityError:
+            messages.error(request, 'Stock error occurred. Please try again.')
+            return redirect('store:cart_detail')
+
         if payment_method == 'cod':
-            messages.success(request, f'Order placed! Pay NRs {order.total_amount} on delivery. Order ID: {order.order_id}')
+            messages.success(
+                request,
+                f'Order placed! Pay NRs {order.total_amount} on delivery. Order ID: {order.order_id}'
+            )
             return redirect('orders:order_detail', order_id=order.order_id)
         else:
             return redirect('orders:initiate_payment', order_id=order.order_id)
-    
+
     return render(request, 'orders/checkout.html', {'cart': cart})
 
 
+# ==================== ORDER DETAIL ====================
 @login_required
 def order_detail_view(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
-    return render(request, 'orders/order_detail.html', {'order': order})
+
+    # Get IDs of helmets the user has already reviewed
+    reviewed_helmet_ids = set(
+        order.reviews.values_list('helmet_id', flat=True)
+    )
+
+    return render(request, 'orders/order_detail.html', {
+        'order': order,
+        'reviewed_helmet_ids': reviewed_helmet_ids,
+    })
 
 
-# ---------- PAYMENT INITIATION ----------
+# ==================== PAYMENT ROUTER ====================
 @login_required
 def initiate_payment_view(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
-    
+
     if order.is_paid:
         messages.warning(request, 'This order is already paid.')
         return redirect('orders:order_detail', order_id=order.order_id)
-    
+
     if order.payment_method == 'esewa':
         return initiate_esewa_payment_form(request, order)
     elif order.payment_method == 'khalti':
@@ -85,14 +115,126 @@ def initiate_payment_view(request, order_id):
         return redirect('orders:order_detail', order_id=order.order_id)
 
 
-# ---------- ESEWA (FORM METHOD - MOST RELIABLE) ----------
+# ==================== KHALTI (ePayment API v2 - Sandbox) ====================
+def initiate_khalti_payment(request, order):
+    """
+    Khalti ePayment API - server-to-server flow.
+    On success, Khalti returns a 'payment_url'. We redirect the user there.
+    """
+    # Strip any accidental whitespace from the key
+    secret_key = settings.KHALTI_SECRET_KEY.strip()
+
+    amount_in_paisa = int(float(order.total_amount) * 100)
+
+    payload = {
+        "return_url": settings.KHALTI_RETURN_URL,
+        "website_url": settings.KHALTI_WEBSITE_URL,
+        "amount": amount_in_paisa,
+        "purchase_order_id": order.order_id,
+        "purchase_order_name": f"Order {order.order_id}",
+        "customer_info": {
+            "name": order.full_name,
+            "email": order.email,
+            "phone": order.phone
+        }
+    }
+
+    headers = {
+        "Authorization": f"Key {secret_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        # Use the json= parameter for cleaner request handling
+        response = requests.post(
+            settings.KHALTI_INITIATE_URL,
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+        response_data = response.json()
+
+        print("\n" + "=" * 60)
+        print("📍 KHALTI INITIATE RESPONSE")
+        print("Status Code:", response.status_code)
+        print("Full Response:", json.dumps(response_data, indent=2))
+        print("=" * 60 + "\n")
+
+        if response.status_code == 200 and 'payment_url' in response_data:
+            return redirect(response_data['payment_url'])
+        else:
+            error_msg = (
+                response_data.get('detail')
+                or response_data.get('error_message')
+                or str(response_data)
+            )
+            messages.error(request, f'Khalti initiation failed: {error_msg}')
+            return redirect('orders:order_detail', order_id=order.order_id)
+
+    except requests.exceptions.RequestException as e:
+        messages.error(request, f'Network error: {str(e)}')
+        return redirect('orders:order_detail', order_id=order.order_id)
+
+
+@login_required
+def khalti_callback_view(request):
+    pidx = request.GET.get('pidx')
+    purchase_order_id = request.GET.get('purchase_order_id')
+    status = request.GET.get('status')
+
+    if status == 'Completed' and pidx and purchase_order_id:
+        secret_key = settings.KHALTI_SECRET_KEY.strip()
+
+        headers = {
+            "Authorization": f"Key {secret_key}",
+            "Content-Type": "application/json",
+        }
+        data = {"pidx": pidx}
+
+        try:
+            response = requests.post(
+                settings.KHALTI_LOOKUP_URL,
+                json=data,
+                headers=headers,
+                timeout=30
+            )
+            result = response.json()
+
+            print("\n" + "=" * 60)
+            print("📍 KHALTI LOOKUP RESPONSE")
+            print("Status Code:", response.status_code)
+            print("Full Response:", json.dumps(result, indent=2))
+            print("=" * 60 + "\n")
+
+            if result.get('status') == 'Completed':
+                order = get_object_or_404(Order, order_id=purchase_order_id)
+                order.is_paid = True
+                order.status = 'paid'
+                order.save()
+                messages.success(
+                    request,
+                    f'Khalti payment successful! Order #{order.order_id} is confirmed.'
+                )
+            else:
+                messages.error(
+                    request,
+                    f'Khalti verification failed: {result.get("status", "Unknown error")}'
+                )
+        except Exception as e:
+            messages.error(request, f'Khalti verification error: {str(e)}')
+    else:
+        messages.error(request, f'Khalti payment was not completed. Status: {status}')
+
+    return redirect('orders:order_detail', order_id=purchase_order_id)
+
+
+# ==================== ESEWA (Form POST v2) ====================
 def initiate_esewa_payment_form(request, order):
     """
-    Uses eSewa's traditional Form POST method.
-    Generates HMAC signature and renders a form that auto-submits.
+    eSewa v2 Form API. Renders a form that auto-submits with HMAC signature.
     """
     esewa_url = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-    
+
     total_amount = str(order.total_amount)
     tax_amount = "0.00"
     product_service_charge = "0.00"
@@ -101,10 +243,13 @@ def initiate_esewa_payment_form(request, order):
     transaction_uuid = order.order_id
     secret_key = settings.ESEWA_SECRET_KEY
 
-    # ✅ Generate HMAC Signature
     signed_field_names = "total_amount,transaction_uuid,product_code"
-    message = f"total_amount={total_amount},transaction_uuid={transaction_uuid},product_code={product_code}"
-    
+    message = (
+        f"total_amount={total_amount},"
+        f"transaction_uuid={transaction_uuid},"
+        f"product_code={product_code}"
+    )
+
     signature = base64.b64encode(
         hmac.new(
             secret_key.encode('utf-8'),
@@ -113,7 +258,6 @@ def initiate_esewa_payment_form(request, order):
         ).digest()
     ).decode('utf-8')
 
-    # ✅ Pass all data to the template
     context = {
         'esewa_url': esewa_url,
         'amount': total_amount,
@@ -129,27 +273,53 @@ def initiate_esewa_payment_form(request, order):
         'signature': signature,
         'order': order,
     }
-    
     return render(request, 'orders/esewa_form.html', context)
 
 
+# ==================== ESEWA CALLBACK (FIXED) ====================
 @login_required
 def esewa_callback_view(request):
     encoded_data = request.GET.get('data')
     if not encoded_data:
         messages.error(request, 'Invalid eSewa response.')
         return redirect('store:home')
-    
-    decoded_data = base64.b64decode(encoded_data).decode('utf-8')
-    data = json.loads(decoded_data)
-    
+
+    try:
+        decoded_data = base64.b64decode(encoded_data).decode('utf-8')
+        data = json.loads(decoded_data)
+    except Exception as e:
+        messages.error(request, f'Error parsing eSewa response: {str(e)}')
+        return redirect('store:home')
+
     transaction_uuid = data.get('transaction_uuid')
     status = data.get('status')
-    total_amount = data.get('total_amount')
     signature_from_esewa = data.get('signature')
-    
+    signed_field_names = data.get('signed_field_names', '')
+
+    # ============================================================
+    # ✅ FIX: Build the verification message dynamically using
+    # the exact fields listed in `signed_field_names`, in the
+    # exact order eSewa specified.
+    # ============================================================
     secret_key = settings.ESEWA_SECRET_KEY
-    message = f"transaction_uuid={transaction_uuid},status={status},total_amount={total_amount}"
+
+    field_names = signed_field_names.split(',')
+
+    message_parts = []
+    for field in field_names:
+        if field in data:
+            message_parts.append(f"{field}={data[field]}")
+
+    message = ",".join(message_parts)
+
+    # Debug output — check your terminal
+    print("\n" + "=" * 60)
+    print("📍 ESEWA VERIFICATION")
+    print("Signed field names:", signed_field_names)
+    print("Message being signed:", message)
+    print("Signature from eSewa:", signature_from_esewa)
+    print("=" * 60 + "\n")
+
     computed_signature = base64.b64encode(
         hmac.new(
             secret_key.encode('utf-8'),
@@ -157,92 +327,27 @@ def esewa_callback_view(request):
             hashlib.sha256
         ).digest()
     ).decode('utf-8')
-    
+
+    print("Computed signature:", computed_signature)
+    print("=" * 60 + "\n")
+
     if computed_signature != signature_from_esewa:
         messages.error(request, 'Payment verification failed: Invalid signature.')
         return redirect('store:home')
-    
+
     if status == 'COMPLETE':
         try:
             order = Order.objects.get(order_id=transaction_uuid)
             order.is_paid = True
-            order.status = 'processing'
+            order.status = 'paid'
             order.save()
-            messages.success(request, f'Payment successful! Order #{order.order_id} is confirmed.')
+            messages.success(
+                request,
+                f'Payment successful! Order #{order.order_id} is confirmed.'
+            )
         except Order.DoesNotExist:
             messages.error(request, 'Order not found.')
     else:
         messages.error(request, f'Payment failed. Status: {status}')
-    
+
     return redirect('orders:order_detail', order_id=transaction_uuid)
-
-
-# ---------- KHALTI ----------
-def initiate_khalti_payment(request, order):
-    amount_in_paisa = int(float(order.total_amount) * 100)
-    
-    payload = {
-        "return_url": settings.KHALTI_RETURN_URL,
-        "website_url": settings.KHALTI_WEBSITE_URL,
-        "amount": amount_in_paisa,
-        "purchase_order_id": order.order_id,
-        "purchase_order_name": f"Order {order.order_id}",
-        "customer_info": {
-            "name": order.full_name,
-            "email": order.email,
-            "phone": order.phone
-        }
-    }
-    
-    headers = {
-        "Authorization": f"Key {settings.KHALTI_SECRET_KEY}",
-        "Content-Type": "application/json",
-    }
-    
-    try:
-        response = requests.post(
-            settings.KHALTI_INITIATE_URL,
-            data=json.dumps(payload),
-            headers=headers
-        )
-        response_data = response.json()
-        
-        if response.status_code == 200 and 'payment_url' in response_data:
-            return redirect(response_data['payment_url'])
-        else:
-            messages.error(request, f'Khalti initiation failed: {response_data.get("detail", "Unknown error")}')
-            return redirect('orders:order_detail', order_id=order.order_id)
-    except Exception as e:
-        messages.error(request, f'Khalti error: {str(e)}')
-        return redirect('orders:order_detail', order_id=order.order_id)
-
-
-@login_required
-def khalti_callback_view(request):
-    pidx = request.GET.get('pidx')
-    purchase_order_id = request.GET.get('purchase_order_id')
-    status = request.GET.get('status')
-    
-    if status == 'Completed':
-        headers = {"Authorization": f"Key {settings.KHALTI_SECRET_KEY}"}
-        data = {"pidx": pidx}
-        verify_url = "https://a.khalti.com/api/v2/epayment/lookup/"
-        
-        try:
-            response = requests.post(verify_url, json=data, headers=headers)
-            result = response.json()
-            
-            if result.get('status') == 'Completed':
-                order = get_object_or_404(Order, order_id=purchase_order_id)
-                order.is_paid = True
-                order.status = 'processing'
-                order.save()
-                messages.success(request, f'Khalti payment successful! Order #{order.order_id} is confirmed.')
-            else:
-                messages.error(request, 'Khalti verification failed: Payment not completed.')
-        except Exception as e:
-            messages.error(request, f'Khalti verification error: {str(e)}')
-    else:
-        messages.error(request, f'Khalti payment was not completed. Status: {status}')
-    
-    return redirect('orders:order_detail', order_id=purchase_order_id)

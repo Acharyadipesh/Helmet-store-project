@@ -6,14 +6,14 @@
 {% block content %}
 <div class="container py-5">
     <div class="text-center mb-5">
-        <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center mb-3" 
+        <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center mb-3"
              style="width: 80px; height: 80px; font-size: 2.5rem;">
             <i class="fas fa-check"></i>
         </div>
         <h2 class="fw-bold">Order Placed Successfully!</h2>
         <p class="text-muted">Thank you for shopping with HelmetHub Nepal</p>
     </div>
-    
+
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card border-0 rounded-4 shadow-sm mb-4">
@@ -23,26 +23,29 @@
                             <h5 class="fw-bold mb-1">Order #{{ order.order_id }}</h5>
                             <small class="text-muted">{{ order.created_at|date:"F d, Y" }}</small>
                         </div>
-                        <span class="badge bg-{% if order.status == 'delivered' %}success{% elif order.status == 'shipped' %}info{% elif order.status == 'cancelled' %}danger{% else %}warning{% endif %} fs-6 px-3 py-2">
+                        <span class="badge bg-{% if order.status == 'delivered' or order.status == 'paid' %}success{% elif order.status == 'shipped' %}info{% elif order.status == 'cancelled' %}danger{% else %}warning{% endif %} fs-6 px-3 py-2">
+                            {% if order.status == 'paid' or order.status == 'delivered' %}
+                                <i class="fas fa-check-circle me-1"></i>
+                            {% endif %}
                             {{ order.get_status_display }}
                         </span>
                     </div>
-                    
+
                     <div class="alert alert-info rounded-4 mb-4">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-{% if order.payment_method == 'cod' %}money-bill-wave{% elif order.payment_method == 'khalti' %}wallet{% else %}mobile-alt{% endif %} fa-2x me-3"></i>
                             <div>
                                 <strong>Payment Method:</strong> {{ order.get_payment_method_display }}
                                 {% if order.payment_method == 'cod' %}
-                                <div class="small text-muted">Pay NRs {{ order.total_amount }} when your order is delivered.</div>
+                                    <div class="small text-muted">Pay NRs {{ order.total_amount }} when your order is delivered.</div>
                                 {% else %}
-                                <div class="small text-muted">Please complete your payment to process the order.</div>
+                                    <div class="small text-muted">Please complete your payment to process the order.</div>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
 
-                    <!-- ======== PAYMENT ACTION BLOCK ======== -->
+                    <!-- PAYMENT ACTION -->
                     {% if not order.is_paid and order.payment_method != 'cod' %}
                     <div class="alert alert-warning rounded-4 mb-4 border-2 border-warning">
                         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
@@ -65,14 +68,13 @@
                     </div>
                     {% elif order.is_paid %}
                     <div class="alert alert-success rounded-4 mb-4">
-                        <i class="fas fa-check-circle me-2"></i> 
+                        <i class="fas fa-check-circle me-2"></i>
                         <strong>Payment Confirmed!</strong> Your order is now being processed.
                     </div>
                     {% endif %}
-                    <!-- ======== END PAYMENT ACTION ======== -->
-                    
+
                     <hr>
-                    
+
                     <h6 class="fw-bold mb-3">Items Ordered</h6>
                     {% for item in order.items.all %}
                     <div class="d-flex align-items-center mb-3 p-3 rounded-3" style="background: #f8f9fa;">
@@ -80,12 +82,28 @@
                             <div class="fw-bold">{{ item.helmet.brand.name }} {{ item.helmet.name }}</div>
                             <small class="text-muted">Qty: {{ item.quantity }} | NRs {{ item.price }} each</small>
                         </div>
-                        <div class="fw-bold" style="color: var(--primary);">NRs {{ item.get_subtotal }}</div>
+                        <div class="text-end">
+                            <div class="fw-bold mb-2" style="color: var(--primary);">NRs {{ item.get_subtotal }}</div>
+
+                            {% if order.status == 'paid' or order.status == 'shipped' or order.status == 'delivered' %}
+                                {% if item.helmet.pk in reviewed_helmet_ids %}
+                                    <a href="{% url 'store:helmet_detail' item.helmet.slug %}"
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-check-circle me-1"></i>Reviewed
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'store:write_review' item.id %}"
+                                       class="btn btn-sm btn-warning">
+                                        <i class="fas fa-star me-1"></i>Write a Review
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
                     </div>
                     {% endfor %}
-                    
+
                     <hr>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <h6 class="fw-bold mb-2">Shipping Address</h6>
@@ -105,7 +123,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="text-center">
                 <a href="{% url 'store:home' %}" class="btn btn-hero btn-lg">
                     <i class="fas fa-shopping-bag me-2"></i>Continue Shopping

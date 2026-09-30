@@ -98,10 +98,17 @@ ESEWA_SECRET_KEY = "8gBm/:&EnhH.1/q"
 ESEWA_SUCCESS_URL = "http://127.0.0.1:8000/orders/esewa-success/"
 ESEWA_FAILURE_URL = "http://127.0.0.1:8000/orders/esewa-failure/"
 
-# Khalti (Test/Live Keys)
-# !!! IMPORTANT: Replace "test_secret_key_123456789" with your actual test key from the Khalti dashboard !!!
-KHALTI_SECRET_KEY = "TEST:O7QxjFcdueNzAh9aBOsD"  
-KHALTI_VERIFY_URL = "https://khalti.com/api/v2/payment/verify/"
-KHALTI_INITIATE_URL = "https://a.khalti.com/api/v2/epayment/initiate/"
+# ========== KHALTI SETTINGS (SANDBOX) ==========
+
+
+KHALTI_SECRET_KEY = "4f0016596df04e868ea138a96b33744a"
+
+
+
+# Sandbox endpoints (MUST use dev.khalti.com)
+KHALTI_INITIATE_URL = "https://dev.khalti.com/api/v2/epayment/initiate/"
+KHALTI_LOOKUP_URL = "https://dev.khalti.com/api/v2/epayment/lookup/"
+
+# Your local callback URLs
 KHALTI_RETURN_URL = "http://127.0.0.1:8000/orders/khalti-verify/"
-KHALTI_WEBSITE_URL = "http://127.0.0.1:8000"  # Your site's domain
+KHALTI_WEBSITE_URL = "http://127.0.0.1:8000"

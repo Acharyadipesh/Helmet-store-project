@@ -1,0 +1,29 @@
+# Django
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+db.sqlite3-journal
+/media/
+/staticfiles/
+/static/
+
+# Environment variables
+.env
+.env.*
+venv/
+env/
+ENV/
+
+# Secret test files (NEVER commit keys!)
+test_khalti.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
