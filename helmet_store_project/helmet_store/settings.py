@@ -1,12 +1,14 @@
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-change-this-in-production-123456789'
-
-DEBUG = True
-
-ALLOWED_HOSTS = []
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'fallback-dev-key-only-for-local')
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -90,25 +92,16 @@ LOGIN_URL = 'accounts:login'
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
-# ========== PAYMENT GATEWAY SETTINGS (ADD THIS TO THE BOTTOM) ==========
+# ========== PAYMENT GATEWAYS ==========
 
-# eSewa (Test/Live Keys)
-ESEWA_MERCHANT_CODE = "EPAYTEST"
-ESEWA_SECRET_KEY = "8gBm/:&EnhH.1/q"  
-ESEWA_SUCCESS_URL = "http://127.0.0.1:8000/orders/esewa-success/"
-ESEWA_FAILURE_URL = "http://127.0.0.1:8000/orders/esewa-failure/"
+ESEWA_MERCHANT_CODE = os.environ.get('ESEWA_MERCHANT_CODE', 'EPAYTEST')
+ESEWA_SECRET_KEY = os.environ.get('ESEWA_SECRET_KEY', '')
+ESEWA_SUCCESS_URL = os.environ.get('ESEWA_SUCCESS_URL', 'http://127.0.0.1:8000/orders/esewa-success/')
+ESEWA_FAILURE_URL = os.environ.get('ESEWA_FAILURE_URL', 'http://127.0.0.1:8000/orders/esewa-failure/')
 
-# ========== KHALTI SETTINGS (SANDBOX) ==========
-
-
-KHALTI_SECRET_KEY = "4f0016596df04e868ea138a96b33744a"
-
-
-
-# Sandbox endpoints (MUST use dev.khalti.com)
-KHALTI_INITIATE_URL = "https://dev.khalti.com/api/v2/epayment/initiate/"
-KHALTI_LOOKUP_URL = "https://dev.khalti.com/api/v2/epayment/lookup/"
-
-# Your local callback URLs
-KHALTI_RETURN_URL = "http://127.0.0.1:8000/orders/khalti-verify/"
-KHALTI_WEBSITE_URL = "http://127.0.0.1:8000"
+KHALTI_SECRET_KEY = os.environ.get('KHALTI_SECRET_KEY', '')
+KHALTI_PUBLIC_KEY = os.environ.get('KHALTI_PUBLIC_KEY', '')
+KHALTI_INITIATE_URL = os.environ.get('KHALTI_INITIATE_URL', 'https://dev.khalti.com/api/v2/epayment/initiate/')
+KHALTI_LOOKUP_URL = os.environ.get('KHALTI_LOOKUP_URL', 'https://dev.khalti.com/api/v2/epayment/lookup/')
+KHALTI_RETURN_URL = os.environ.get('KHALTI_RETURN_URL', 'http://127.0.0.1:8000/orders/khalti-verify/')
+KHALTI_WEBSITE_URL = os.environ.get('KHALTI_WEBSITE_URL', 'http://127.0.0.1:8000')
