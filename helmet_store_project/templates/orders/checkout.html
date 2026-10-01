@@ -3,6 +3,148 @@
 
 {% block title %}Checkout - HelmetHub Nepal{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* ========== PAYMENT METHOD SELECTOR (HORIZONTAL) ========== */
+    .payment-methods {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    @media (max-width: 576px) {
+        .payment-methods {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .payment-option {
+        cursor: pointer;
+        display: block;
+        margin: 0;
+        position: relative;
+    }
+    .payment-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .payment-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 10px 12px;
+        border: 2px solid #e5e7eb;
+        border-radius: 14px;
+        background: white;
+        transition: all 0.25s ease;
+        text-align: center;
+        position: relative;
+        min-height: 118px;
+        height: 100%;
+    }
+    .payment-option:hover .payment-card {
+        border-color: #d1d5db;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    .payment-option input[type="radio"]:checked + .payment-card {
+        border-color: var(--primary);
+        background: #fff9f5;
+        box-shadow: 0 8px 22px rgba(255, 107, 53, 0.18);
+    }
+
+    /* Small checkmark badge in top-right */
+    .payment-check-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.65rem;
+        transition: all 0.25s;
+    }
+    .payment-option input[type="radio"]:checked + .payment-card .payment-check-badge {
+        background: var(--primary);
+        box-shadow: 0 3px 10px rgba(255, 107, 53, 0.5);
+    }
+
+    /* Logo area */
+    .payment-logo {
+        width: 100%;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 8px;
+        padding: 4px 6px;
+        border: 1px solid #f3f4f6;
+        overflow: hidden;
+    }
+    .payment-logo img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+    }
+
+    /* Labels below the logo */
+    .payment-name {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--dark);
+        margin: 0;
+        line-height: 1.2;
+    }
+    .payment-desc {
+        font-size: 0.68rem;
+        color: #9ca3af;
+        line-height: 1.25;
+        margin: 0;
+    }
+
+    /* COD icon inside logo */
+    .cod-icon-lg {
+        color: #ff6b35;
+        font-size: 1.6rem;
+    }
+
+    @media (max-width: 576px) {
+        .payment-card {
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: left;
+            gap: 12px;
+            padding: 10px 14px;
+            min-height: auto;
+        }
+        .payment-logo {
+            width: 90px;
+            min-width: 90px;
+            height: 40px;
+        }
+        .payment-info {
+            flex: 1;
+            text-align: left;
+        }
+        .payment-name { font-size: 0.92rem; }
+        .payment-desc { font-size: 0.72rem; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <h2 class="fw-bold mb-4"><i class="fas fa-clipboard-list me-2"></i>Checkout</h2>
@@ -12,7 +154,7 @@
             <div class="card border-0 rounded-4 shadow-sm">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-3">Shipping Information</h5>
-                    <form method="POST">
+                    <form method="POST" id="checkoutForm">
                         {% csrf_token %}
                         
                         <div class="row">
@@ -55,31 +197,63 @@
                             </div>
                         </div>
                         
-                        <hr>
+                        <hr class="my-4">
                         
                         <h5 class="fw-bold mb-3">Payment Method</h5>
-                        <div class="d-flex flex-wrap gap-4 mb-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="cod" value="cod" checked>
-                                <label class="form-check-label" for="cod">
-                                    <i class="fas fa-money-bill-wave me-1"></i> Cash on Delivery
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="esewa" value="esewa">
-                                <label class="form-check-label" for="esewa">
-                                    <i class="fas fa-credit-card me-1"></i> eSewa
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="khalti" value="khalti">
-                                <label class="form-check-label" for="khalti">
-                                    <i class="fas fa-mobile-alt me-1"></i> Khalti
-                                </label>
-                            </div>
+                        <div class="payment-methods">
+                            
+                            <!-- ========== Cash on Delivery ========== -->
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="cod" checked>
+                                <div class="payment-card">
+                                    <div class="payment-check-badge"><i class="fas fa-check"></i></div>
+                                    <div class="payment-logo">
+                                        <i class="fas fa-money-bill-wave cod-icon-lg"></i>
+                                    </div>
+                                    <div class="payment-info">
+                                        <div class="payment-name">Cash on Delivery</div>
+                                        <div class="payment-desc">Pay on arrival</div>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- ========== eSewa ========== -->
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="esewa">
+                                <div class="payment-card">
+                                    <div class="payment-check-badge"><i class="fas fa-check"></i></div>
+                                    <div class="payment-logo">
+                                        <img src="https://cdn.esewa.com.np/ui/images/esewa-logo.png" 
+                                             alt="eSewa" 
+                                             onerror="this.onerror=null; this.outerHTML='<span style=\'font-weight:700; color:#60BB46; font-size:1.1rem;\'>eSewa</span>';">
+                                    </div>
+                                    <div class="payment-info">
+                                        <div class="payment-name">eSewa</div>
+                                        <div class="payment-desc">Digital wallet</div>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- ========== Khalti ========== -->
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="khalti">
+                                <div class="payment-card">
+                                    <div class="payment-check-badge"><i class="fas fa-check"></i></div>
+                                    <div class="payment-logo">
+                                        <img src="https://khalti-static.s3.ap-south-1.amazonaws.com/cloudfront-cdn/jamara/web19/images/khalti-logo.svg" 
+                                             alt="Khalti" 
+                                             onerror="this.onerror=null; this.outerHTML='<span style=\'font-weight:900; color:#DC0019; font-size:1.15rem;\'>khalti</span>';">
+                                    </div>
+                                    <div class="payment-info">
+                                        <div class="payment-name">Khalti</div>
+                                        <div class="payment-desc">Digital wallet</div>
+                                    </div>
+                                </div>
+                            </label>
+
                         </div>
                         
-                        <button type="submit" class="btn btn-hero btn-lg w-100">
+                        <button type="submit" class="btn btn-hero btn-lg w-100 mt-4">
                             <i class="fas fa-check-circle me-2"></i>Place Order
                         </button>
                     </form>

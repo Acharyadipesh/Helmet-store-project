@@ -71,7 +71,7 @@ class Helmet(models.Model):
     stock = models.PositiveIntegerField(default=10)
     is_available = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
-    is_coming_soon = models.BooleanField(default=False)   # ← NEW
+    is_coming_soon = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -99,26 +99,38 @@ class Helmet(models.Model):
         return round(avg, 1) if avg else 0
 
     def get_stock_status(self):
-        """Returns 'coming_soon', 'in_stock', or 'out_of_stock'."""
+        """
+        Returns one of:
+        - 'coming_soon'
+        - 'out_of_stock'
+        - 'limited_stock'  (less than 5 left)
+        - 'in_stock'
+        """
         if self.is_coming_soon:
             return 'coming_soon'
-        if self.stock > 0:
-            return 'in_stock'
-        return 'out_of_stock'
+        if self.stock == 0:
+            return 'out_of_stock'
+        if self.stock < 5:
+            return 'limited_stock'
+        return 'in_stock'
 
     def get_stock_label(self):
         if self.is_coming_soon:
             return 'Coming Soon'
-        if self.stock > 0:
-            return 'In Stock'
-        return 'Out of Stock'
+        if self.stock == 0:
+            return 'Out of Stock'
+        if self.stock < 5:
+            return f'Only {self.stock} Left!'
+        return 'In Stock'
 
     def get_stock_badge_color(self):
         if self.is_coming_soon:
             return 'warning'
-        if self.stock > 0:
-            return 'success'
-        return 'danger'
+        if self.stock == 0:
+            return 'danger'
+        if self.stock < 5:
+            return 'warning'
+        return 'success'
 
 
 class HelmetImage(models.Model):

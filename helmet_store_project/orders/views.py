@@ -31,15 +31,21 @@ def checkout_view(request):
 
         try:
             with transaction.atomic():
-                # Check stock before creating the order
-                for item in cart.items.all():
+                # ✅ Re-fetch items with select_for_update to prevent race conditions
+                cart_items = list(
+                    cart.items.select_related('helmet').select_for_update()
+                )
+
+                # ✅ Step 1: Validate stock for ALL items
+                for item in cart_items:
                     if item.quantity > item.helmet.stock:
                         messages.error(
                             request,
-                            f'Sorry, only {item.helmet.stock} units of "{item.helmet.name}" are available.'
+                            f'Sorry, only {item.helmet.stock} unit(s) of "{item.helmet.name}" are available.'
                         )
                         return redirect('store:cart_detail')
 
+                # ✅ Step 2: Create the order
                 order = Order.objects.create(
                     user=request.user,
                     order_id=get_random_string(10).upper(),
@@ -53,22 +59,36 @@ def checkout_view(request):
                     total_amount=cart.get_total(),
                 )
 
-                for item in cart.items.all():
+                # ✅ Step 3: Create order items AND reduce stock
+                #    This runs for COD and online payments the SAME way.
+                for item in cart_items:
                     OrderItem.objects.create(
                         order=order,
                         helmet=item.helmet,
                         quantity=item.quantity,
                         price=item.helmet.get_price(),
                     )
-                    item.helmet.stock -= item.quantity
-                    item.helmet.save()
 
+                    # Reduce stock
+                    helmet = item.helmet
+                    old_stock = helmet.stock
+                    helmet.stock = old_stock - item.quantity
+                    helmet.save(update_fields=['stock'])
+
+                    # 🔍 DEBUG: See this in the terminal
+                    print(f"\n🛒 STOCK UPDATE | {helmet.name}")
+                    print(f"   Before: {old_stock} → After: {helmet.stock} (qty: {item.quantity})")
+                    print(f"   Payment: {payment_method}\n")
+
+                # ✅ Step 4: Clear the cart
                 cart.items.all().delete()
 
-        except IntegrityError:
+        except IntegrityError as e:
+            print(f"❌ IntegrityError during checkout: {e}")
             messages.error(request, 'Stock error occurred. Please try again.')
             return redirect('store:cart_detail')
 
+        # ==================== ROUTE BY PAYMENT METHOD ====================
         if payment_method == 'cod':
             messages.success(
                 request,
@@ -86,7 +106,6 @@ def checkout_view(request):
 def order_detail_view(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
 
-    # Get IDs of helmets the user has already reviewed
     reviewed_helmet_ids = set(
         order.reviews.values_list('helmet_id', flat=True)
     )
@@ -115,15 +134,9 @@ def initiate_payment_view(request, order_id):
         return redirect('orders:order_detail', order_id=order.order_id)
 
 
-# ==================== KHALTI (ePayment API v2 - Sandbox) ====================
+# ==================== KHALTI ====================
 def initiate_khalti_payment(request, order):
-    """
-    Khalti ePayment API - server-to-server flow.
-    On success, Khalti returns a 'payment_url'. We redirect the user there.
-    """
-    # Strip any accidental whitespace from the key
     secret_key = settings.KHALTI_SECRET_KEY.strip()
-
     amount_in_paisa = int(float(order.total_amount) * 100)
 
     payload = {
@@ -145,7 +158,6 @@ def initiate_khalti_payment(request, order):
     }
 
     try:
-        # Use the json= parameter for cleaner request handling
         response = requests.post(
             settings.KHALTI_INITIATE_URL,
             json=payload,
@@ -163,11 +175,7 @@ def initiate_khalti_payment(request, order):
         if response.status_code == 200 and 'payment_url' in response_data:
             return redirect(response_data['payment_url'])
         else:
-            error_msg = (
-                response_data.get('detail')
-                or response_data.get('error_message')
-                or str(response_data)
-            )
+            error_msg = response_data.get('detail') or response_data.get('error_message') or str(response_data)
             messages.error(request, f'Khalti initiation failed: {error_msg}')
             return redirect('orders:order_detail', order_id=order.order_id)
 
@@ -184,7 +192,6 @@ def khalti_callback_view(request):
 
     if status == 'Completed' and pidx and purchase_order_id:
         secret_key = settings.KHALTI_SECRET_KEY.strip()
-
         headers = {
             "Authorization": f"Key {secret_key}",
             "Content-Type": "application/json",
@@ -211,15 +218,9 @@ def khalti_callback_view(request):
                 order.is_paid = True
                 order.status = 'paid'
                 order.save()
-                messages.success(
-                    request,
-                    f'Khalti payment successful! Order #{order.order_id} is confirmed.'
-                )
+                messages.success(request, f'Khalti payment successful! Order #{order.order_id} is confirmed.')
             else:
-                messages.error(
-                    request,
-                    f'Khalti verification failed: {result.get("status", "Unknown error")}'
-                )
+                messages.error(request, f'Khalti verification failed: {result.get("status", "Unknown error")}')
         except Exception as e:
             messages.error(request, f'Khalti verification error: {str(e)}')
     else:
@@ -228,13 +229,9 @@ def khalti_callback_view(request):
     return redirect('orders:order_detail', order_id=purchase_order_id)
 
 
-# ==================== ESEWA (Form POST v2) ====================
+# ==================== ESEWA ====================
 def initiate_esewa_payment_form(request, order):
-    """
-    eSewa v2 Form API. Renders a form that auto-submits with HMAC signature.
-    """
     esewa_url = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-
     total_amount = str(order.total_amount)
     tax_amount = "0.00"
     product_service_charge = "0.00"
@@ -276,7 +273,6 @@ def initiate_esewa_payment_form(request, order):
     return render(request, 'orders/esewa_form.html', context)
 
 
-# ==================== ESEWA CALLBACK (FIXED) ====================
 @login_required
 def esewa_callback_view(request):
     encoded_data = request.GET.get('data')
@@ -296,28 +292,18 @@ def esewa_callback_view(request):
     signature_from_esewa = data.get('signature')
     signed_field_names = data.get('signed_field_names', '')
 
-    # ============================================================
-    # ✅ FIX: Build the verification message dynamically using
-    # the exact fields listed in `signed_field_names`, in the
-    # exact order eSewa specified.
-    # ============================================================
     secret_key = settings.ESEWA_SECRET_KEY
-
     field_names = signed_field_names.split(',')
-
     message_parts = []
     for field in field_names:
         if field in data:
             message_parts.append(f"{field}={data[field]}")
-
     message = ",".join(message_parts)
 
-    # Debug output — check your terminal
     print("\n" + "=" * 60)
     print("📍 ESEWA VERIFICATION")
     print("Signed field names:", signed_field_names)
     print("Message being signed:", message)
-    print("Signature from eSewa:", signature_from_esewa)
     print("=" * 60 + "\n")
 
     computed_signature = base64.b64encode(
@@ -327,9 +313,6 @@ def esewa_callback_view(request):
             hashlib.sha256
         ).digest()
     ).decode('utf-8')
-
-    print("Computed signature:", computed_signature)
-    print("=" * 60 + "\n")
 
     if computed_signature != signature_from_esewa:
         messages.error(request, 'Payment verification failed: Invalid signature.')
@@ -341,10 +324,7 @@ def esewa_callback_view(request):
             order.is_paid = True
             order.status = 'paid'
             order.save()
-            messages.success(
-                request,
-                f'Payment successful! Order #{order.order_id} is confirmed.'
-            )
+            messages.success(request, f'Payment successful! Order #{order.order_id} is confirmed.')
         except Order.DoesNotExist:
             messages.error(request, 'Order not found.')
     else:

@@ -183,13 +183,34 @@
             <!-- Stock Status -->
             <div class="mb-4">
                 {% if helmet.is_coming_soon %}
-                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2"><i class="fas fa-clock me-1"></i>Coming Soon — Available Shortly</span>
-                {% elif helmet.stock > 0 %}
-                    <span class="badge bg-success rounded-pill px-3 py-2"><i class="fas fa-check-circle me-1"></i>In Stock ({{ helmet.stock }} left)</span>
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
+                        <i class="fas fa-clock me-1"></i>Coming Soon — Available Shortly
+                    </span>
+                {% elif helmet.stock == 0 %}
+                    <span class="badge bg-danger rounded-pill px-3 py-2">
+                        <i class="fas fa-times-circle me-1"></i>Out of Stock
+                    </span>
+                {% elif helmet.stock < 5 %}
+                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color: white;">
+                        <i class="fas fa-fire me-1"></i>Hurry! Only {{ helmet.stock }} left in stock
+                    </span>
                 {% else %}
-                    <span class="badge bg-danger rounded-pill px-3 py-2"><i class="fas fa-times-circle me-1"></i>Out of Stock</span>
+                    <span class="badge bg-success rounded-pill px-3 py-2">
+                        <i class="fas fa-check-circle me-1"></i>In Stock ({{ helmet.stock }} left)
+                    </span>
                 {% endif %}
             </div>
+
+            <!-- Urgency banner for limited stock -->
+            {% if helmet.stock > 0 and helmet.stock < 5 and not helmet.is_coming_soon %}
+            <div class="alert alert-warning rounded-4 mb-4 d-flex align-items-center" style="background: #fff7ed; border: 1.5px solid #f59e0b; color: #b45309;">
+                <i class="fas fa-fire fa-2x me-3" style="color: #ea580c;"></i>
+                <div>
+                    <strong>Hurry! Only {{ helmet.stock }} left in stock.</strong>
+                    <div class="small">Once they're gone, this helmet may take weeks to restock.</div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Actions -->
             <div class="d-flex gap-3 mb-5">
