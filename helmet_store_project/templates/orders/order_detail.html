@@ -71,90 +71,41 @@
         right: 17%;
     }
 
-    /* ========== PAYMENT METHOD BADGE (COMPACT BRAND LOGOS) ========== */
-    .payment-logo-sm {
-        width: 92px;
-        min-width: 92px;
+    /* ========== PAYMENT LOGO — EXACT SAME AS CHECKOUT ========== */
+    .payment-logo {
+        width: 100px;
         height: 44px;
+        min-width: 100px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: white;
         border-radius: 10px;
-        padding: 4px 8px;
-        border: 1px solid #e5e7eb;
-        flex-shrink: 0;
+        padding: 4px 6px;
+        border: 1px solid #f0f0f0;
+        overflow: hidden;
+    }
+    .payment-logo img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
     }
 
-    /* eSewa Logo — green circle "e" + serif "Sewa" */
-    .esewa-logo {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-family: 'Poppins', sans-serif;
-    }
-    .esewa-circle {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: #60BB46;
+    /* COD fallback icon */
+    .cod-logo {
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-weight: 800;
-        font-size: 1.05rem;
-        line-height: 1;
-        font-style: italic;
-        padding-right: 2px;
-    }
-    .esewa-text {
-        font-family: Georgia, 'Times New Roman', serif;
-        font-size: 1.35rem;
-        font-weight: 400;
-        color: #1a1a1a;
-        letter-spacing: -0.5px;
-        line-height: 1;
-    }
-
-    /* Khalti Logo — "khalti" in red + "by IME" */
-    .khalti-logo {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        line-height: 1;
-    }
-    .khalti-text {
-        font-family: 'Poppins', sans-serif;
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: #E91E63;
-        letter-spacing: -1px;
-        line-height: 1;
-    }
-    .khalti-by {
-        font-family: 'Poppins', sans-serif;
-        font-size: 0.55rem;
-        font-weight: 600;
-        color: #666;
-        margin-top: 1px;
-        letter-spacing: 0.3px;
-    }
-    .khalti-by b {
-        color: #E91E63;
-        font-weight: 800;
-        font-size: 0.68rem;
-    }
-
-    /* COD Logo — orange money icon + "COD" */
-    .cod-logo-sm {
-        display: flex;
-        align-items: center;
         gap: 6px;
         color: #ff6b35;
     }
-    .cod-logo-sm i { font-size: 1.4rem; }
-    .cod-logo-sm span {
+    .cod-logo i {
+        font-size: 1.4rem;
+    }
+    .cod-logo span {
         font-family: 'Poppins', sans-serif;
         font-size: 0.8rem;
         font-weight: 800;
@@ -189,19 +140,12 @@
             left: 20%;
             right: 20%;
         }
-        .payment-logo-sm {
-            width: 78px;
-            min-width: 78px;
+        .payment-logo {
+            width: 82px;
+            min-width: 82px;
             height: 40px;
-            padding: 3px 6px;
+            padding: 3px 5px;
         }
-        .esewa-circle { width: 24px; height: 24px; font-size: 0.9rem; }
-        .esewa-text { font-size: 1.15rem; }
-        .khalti-text { font-size: 1.15rem; }
-        .khalti-by { font-size: 0.5rem; }
-        .khalti-by b { font-size: 0.6rem; }
-        .cod-logo-sm i { font-size: 1.2rem; }
-        .cod-logo-sm span { font-size: 0.7rem; }
     }
 </style>
 {% endblock %}
@@ -239,7 +183,6 @@
                     {% if order.status != 'cancelled' %}
 
                         {% if order.payment_method == 'cod' %}
-                        <!-- COD TRACKER: 3 steps -->
                         <div class="progress-tracker three-steps">
                             <div class="progress-connector">
                                 <div class="connector-fill" style="width: 
@@ -270,7 +213,6 @@
                         </div>
 
                         {% else %}
-                        <!-- ONLINE PAYMENT TRACKER: 4 steps -->
                         <div class="progress-tracker">
                             <div class="progress-connector">
                                 <div class="connector-fill" style="width: 
@@ -317,29 +259,29 @@
                     </div>
                     {% endif %}
 
-                    <!-- ========== PAYMENT METHOD INFO (WITH BRAND LOGOS) ========== -->
+                    <!-- ========== PAYMENT METHOD INFO (SAME AS CHECKOUT) ========== -->
                     <div class="alert alert-info rounded-4 mb-4">
                         <div class="d-flex align-items-center">
                             {% if order.payment_method == 'cod' %}
-                                <div class="payment-logo-sm me-3">
-                                    <div class="cod-logo-sm">
+                                <div class="payment-logo me-3">
+                                    <div class="cod-logo">
                                         <i class="fas fa-money-bill-wave"></i>
                                         <span>COD</span>
                                     </div>
                                 </div>
                             {% elif order.payment_method == 'esewa' %}
-                                <div class="payment-logo-sm me-3">
-                                    <div class="esewa-logo">
-                                        <div class="esewa-circle">e</div>
-                                        <div class="esewa-text">Sewa</div>
-                                    </div>
+                                <div class="payment-logo me-3">
+                                    <!-- ✅ Same URL as checkout page -->
+                                    <img src="https://cdn.esewa.com.np/ui/images/esewa-logo.png" 
+                                         alt="eSewa" 
+                                         onerror="this.onerror=null; this.outerHTML='<span style=\'font-weight:700; color:#60BB46; font-size:1.1rem;\'>eSewa</span>';">
                                 </div>
                             {% elif order.payment_method == 'khalti' %}
-                                <div class="payment-logo-sm me-3">
-                                    <div class="khalti-logo">
-                                        <div class="khalti-text">khalti</div>
-                                        <div class="khalti-by">by <b>IME</b></div>
-                                    </div>
+                                <div class="payment-logo me-3">
+                                    <!-- ✅ Khalti — unchanged -->
+                                    <img src="https://khalti-static.s3.ap-south-1.amazonaws.com/cloudfront-cdn/jamara/web19/images/khalti-logo.svg" 
+                                         alt="Khalti" 
+                                         onerror="this.onerror=null; this.outerHTML='<span style=\'font-weight:900; color:#DC0019; font-size:1.15rem;\'>khalti</span>';">
                                 </div>
                             {% endif %}
                             <div>
