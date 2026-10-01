@@ -2,129 +2,362 @@
 
 {% block title %}Compare Helmets - HelmetHub{% endblock %}
 
+{% block extra_css %}
+<style>
+    .compare-wrapper {
+        background: white;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    }
+    .compare-table {
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .compare-table thead th {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: white;
+        border: none;
+        padding: 24px 20px;
+        vertical-align: middle;
+        font-weight: 600;
+    }
+    .compare-table thead th:first-child {
+        background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+        border-top-left-radius: 24px;
+    }
+    .compare-table thead th:last-child {
+        border-top-right-radius: 24px;
+    }
+    .compare-helmet-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+    .compare-helmet-img {
+        width: 140px;
+        height: 140px;
+        background: #fff;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        transition: transform 0.3s;
+    }
+    .compare-helmet-img:hover { transform: scale(1.05); }
+    .compare-helmet-img img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    .compare-helmet-img .placeholder-icon {
+        font-size: 3rem;
+        color: #ccc;
+    }
+    .compare-helmet-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+        line-height: 1.3;
+        text-align: center;
+        color: white;
+        min-height: 2.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-remove-compare {
+        background: rgba(220, 53, 69, 0.15);
+        color: #ff6b7a;
+        border: 1.5px solid rgba(220, 53, 69, 0.4);
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-remove-compare:hover {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+    .empty-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        color: rgba(255,255,255,0.4);
+    }
+    .empty-slot i { font-size: 2.5rem; }
+    .empty-slot a {
+        color: rgba(255,255,255,0.7);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: color 0.3s;
+    }
+    .empty-slot a:hover { color: var(--primary); }
+    .compare-table tbody td {
+        padding: 18px 20px;
+        vertical-align: middle;
+        border-color: #eee;
+        font-size: 0.95rem;
+    }
+    .compare-table tbody tr:nth-child(odd) { background: #fafafa; }
+    .compare-table tbody tr:nth-child(even) { background: white; }
+    .compare-table tbody tr:hover { background: #fff8f4; }
+    .compare-table tbody td:first-child {
+        font-weight: 700;
+        color: var(--dark);
+        background: #f0f2f5;
+        border-right: 2px solid #e0e0e0;
+        min-width: 160px;
+    }
+    .compare-price {
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 1.15rem;
+    }
+    .badge-cert {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .badge-stock-in {
+        background: linear-gradient(135deg, #198754 0%, #157347 100%);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .badge-stock-out {
+        background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .btn-compare-cart {
+        background: var(--dark);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-compare-cart:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+    }
+    .empty-compare {
+        background: white;
+        border-radius: 24px;
+        padding: 80px 20px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    }
+    .empty-compare i {
+        font-size: 5rem;
+        color: #ddd;
+        margin-bottom: 20px;
+    }
+    @media (max-width: 768px) {
+        .compare-helmet-img { width: 100px; height: 100px; }
+        .compare-helmet-name { font-size: 0.8rem; }
+        .compare-table tbody td { padding: 12px 10px; font-size: 0.85rem; }
+        .compare-table tbody td:first-child { min-width: 110px; }
+        .compare-price { font-size: 0.95rem; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
-    <h2 class="fw-bold mb-4"><i class="fas fa-balance-scale me-2"></i>Helmet Comparison</h2>
-    
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h2 class="fw-bold mb-0">
+            <i class="fas fa-balance-scale me-2" style="color: var(--primary);"></i>Helmet Comparison
+        </h2>
+        {% if helmets %}
+        <a href="{% url 'store:helmet_list' %}" class="btn btn-outline-dark rounded-pill px-4">
+            <i class="fas fa-plus me-1"></i>Add More
+        </a>
+        {% endif %}
+    </div>
+
     {% if helmets %}
-    <div class="table-responsive">
-        <table class="table compare-table table-bordered bg-white rounded-4 overflow-hidden">
-            <thead>
-                <tr>
-                    <th style="min-width: 150px;">Feature</th>
-                    {% for h in helmets %}
-                    <th style="min-width: 250px;">
-                        <div class="text-center">
-                            <div class="mb-2" style="height: 120px; display: flex; align-items: center; justify-content: center;">
-                                {% if h.image %}
-                                <img src="{{ h.image.url }}" alt="{{ h.name }}" style="max-height: 100px; object-fit: contain;">
-                                {% else %}
-                                <i class="fas fa-helmet-safety fa-3x text-muted"></i>
-                                {% endif %}
+    <div class="compare-wrapper">
+        <div class="table-responsive">
+            <table class="table compare-table mb-0">
+                <thead>
+                    <tr>
+                        <th style="min-width: 160px;">
+                            <div class="text-center">
+                                <i class="fas fa-list-ul fa-2x mb-2" style="opacity: 0.5;"></i>
+                                <div class="fw-bold">Feature</div>
                             </div>
-                            <div class="fw-bold">{{ h.brand.name }} {{ h.name }}</div>
-                            <a href="{% url 'store:remove_from_compare' h.id %}" class="btn btn-sm btn-outline-danger mt-2">
-                                <i class="fas fa-times me-1"></i>Remove
-                            </a>
-                        </div>
-                    </th>
-                    {% endfor %}
-                    {% for i in "x"|rjust:"3" %}
-                    {% if forloop.counter > helmets|length %}
-                    <th class="text-center text-muted">
-                        <i class="fas fa-plus-circle fa-3x mb-2"></i>
-                        <div>Add Helmet</div>
-                    </th>
-                    {% endif %}
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="fw-bold">Price</td>
-                    {% for h in helmets %}
-                    <td class="text-center fw-bold" style="color: var(--primary); font-size: 1.2rem;">NRs {{ h.get_price }}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Type</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{{ h.get_helmet_type_display }}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Size</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{{ h.get_size_display }}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Weight</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{{ h.weight }} kg</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Material</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{{ h.material }}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Certification</td>
-                    {% for h in helmets %}
-                    <td class="text-center"><span class="badge bg-primary">{{ h.get_certification_display }}</span></td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Color</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{{ h.color }}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Ventilation</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{% if h.ventilation %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Bluetooth Ready</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{% if h.bluetooth_ready %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Sun Visor</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{% if h.sun_visor %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-danger"></i>{% endif %}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Stock</td>
-                    {% for h in helmets %}
-                    <td class="text-center">{% if h.stock > 0 %}<span class="badge bg-success">In Stock ({{ h.stock }})</span>{% else %}<span class="badge bg-danger">Out of Stock</span>{% endif %}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <td class="fw-bold">Action</td>
-                    {% for h in helmets %}
-                    <td class="text-center">
-                        <a href="{% url 'store:add_to_cart' h.id %}" class="btn btn-hero btn-sm">
-                            <i class="fas fa-cart-plus me-1"></i>Add to Cart
-                        </a>
-                    </td>
-                    {% endfor %}
-                </tr>
-            </tbody>
-        </table>
+                        </th>
+                        {% for h in helmets %}
+                        <th style="min-width: 240px;">
+                            <div class="compare-helmet-card">
+                                <div class="compare-helmet-img">
+                                    {% with first_gallery=h.images.first %}
+                                        {% if h.image %}
+                                            <img src="{{ h.image.url }}" alt="{{ h.name }}">
+                                        {% elif first_gallery %}
+                                            <img src="{{ first_gallery.image.url }}" alt="{{ h.name }}">
+                                        {% else %}
+                                            <i class="fas fa-helmet-safety placeholder-icon"></i>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                                <div class="compare-helmet-name">
+                                    {{ h.brand.name }} {{ h.name }}
+                                </div>
+                                <button type="button" class="btn-remove-compare js-remove-compare" data-helmet-id="{{ h.id }}">
+                                    <i class="fas fa-times me-1"></i>Remove
+                                </button>
+                            </div>
+                        </th>
+                        {% endfor %}
+                        {% for i in "x"|rjust:"3" %}
+                        {% if forloop.counter > helmets|length %}
+                        <th style="min-width: 240px;">
+                            <div class="empty-slot">
+                                <i class="fas fa-plus-circle"></i>
+                                <a href="{% url 'store:helmet_list' %}">Add Helmet</a>
+                            </div>
+                        </th>
+                        {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Price</td>
+                        {% for h in helmets %}
+                        <td class="text-center"><span class="compare-price">NRs {{ h.get_price }}</span></td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        {% for h in helmets %}
+                        <td class="text-center">{{ h.get_helmet_type_display }}</td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Size</td>
+                        {% for h in helmets %}
+                        <td class="text-center">{{ h.get_size_display }}</td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Weight</td>
+                        {% for h in helmets %}
+                        <td class="text-center">{{ h.weight }} kg</td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Material</td>
+                        {% for h in helmets %}
+                        <td class="text-center">{{ h.material }}</td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Certification</td>
+                        {% for h in helmets %}
+                        <td class="text-center"><span class="badge badge-cert">{{ h.get_certification_display }}</span></td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Color</td>
+                        {% for h in helmets %}
+                        <td class="text-center">{{ h.color }}</td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Ventilation</td>
+                        {% for h in helmets %}
+                        <td class="text-center">
+                            {% if h.ventilation %}
+                                <i class="fas fa-check-circle text-success fa-lg"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger fa-lg"></i>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Bluetooth Ready</td>
+                        {% for h in helmets %}
+                        <td class="text-center">
+                            {% if h.bluetooth_ready %}
+                                <i class="fas fa-check-circle text-success fa-lg"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger fa-lg"></i>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Sun Visor</td>
+                        {% for h in helmets %}
+                        <td class="text-center">
+                            {% if h.sun_visor %}
+                                <i class="fas fa-check-circle text-success fa-lg"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger fa-lg"></i>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Stock</td>
+                        {% for h in helmets %}
+                        <td class="text-center">
+                            {% if h.stock > 0 %}
+                                <span class="badge badge-stock-in">In Stock ({{ h.stock }})</span>
+                            {% else %}
+                                <span class="badge badge-stock-out">Out of Stock</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Action</td>
+                        {% for h in helmets %}
+                        <td class="text-center">
+                            {% if h.stock > 0 %}
+                                <button type="button" class="btn btn-compare-cart js-add-to-cart" data-helmet-id="{{ h.id }}">
+                                    <i class="fas fa-shopping-cart me-1"></i>Add to Cart
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-compare-cart" disabled style="opacity: 0.4;">
+                                    Out of Stock
+                                </button>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
     {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-balance-scale fa-5x text-muted mb-3"></i>
-        <h4>No helmets to compare</h4>
-        <p class="text-muted">Add up to 3 helmets to compare side by side.</p>
-        <a href="{% url 'store:helmet_list' %}" class="btn btn-hero mt-3">Browse Helmets</a>
+    <div class="empty-compare">
+        <i class="fas fa-balance-scale"></i>
+        <h4 class="fw-bold mb-2">No helmets to compare</h4>
+        <p class="text-muted mb-4">Add up to 3 helmets to compare their specs side by side.</p>
+        <a href="{% url 'store:helmet_list' %}" class="btn btn-hero btn-lg">
+            <i class="fas fa-shopping-bag me-2"></i>Browse Helmets
+        </a>
     </div>
     {% endif %}
 </div>

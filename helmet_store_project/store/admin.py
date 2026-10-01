@@ -9,12 +9,12 @@ class HelmetImageInline(admin.TabularInline):
 
 @admin.register(Helmet)
 class HelmetAdmin(admin.ModelAdmin):
-    list_display = ['name', 'brand', 'price', 'stock', 'helmet_type', 'is_available', 'is_featured']
-    list_filter = ['helmet_type', 'brand', 'certification', 'is_available', 'size']
+    list_display = ['name', 'brand', 'price', 'stock', 'helmet_type', 'is_available', 'is_featured', 'is_coming_soon']
+    list_filter = ['helmet_type', 'brand', 'certification', 'is_available', 'is_featured', 'is_coming_soon', 'size']
     search_fields = ['name', 'description']
     prepopulated_fields = {'slug': ('name',)}
     inlines = [HelmetImageInline]
-    list_editable = ['price', 'stock', 'is_available', 'is_featured']
+    list_editable = ['price', 'stock', 'is_available', 'is_featured', 'is_coming_soon']
 
 
 @admin.register(Category)

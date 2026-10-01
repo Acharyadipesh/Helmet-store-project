@@ -3,9 +3,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Avg
 from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from .models import Helmet, Category, Brand, Cart, CartItem, Review, WishlistItem, CompareItem
 from .forms import ReviewForm
 from orders.models import Order, OrderItem
+
+
+def is_ajax(request):
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
 
 def get_cart(request):
@@ -23,12 +29,19 @@ def home(request):
         'user', 'helmet', 'helmet__brand'
     ).order_by('-created_at')[:6]
 
+    wishlist_ids = set()
+    if request.user.is_authenticated:
+        wishlist_ids = set(
+            WishlistItem.objects.filter(user=request.user).values_list('helmet_id', flat=True)
+        )
+
     context = {
         'featured': featured,
         'new_arrivals': new_arrivals,
         'categories': categories,
         'brands': brands,
         'recent_reviews': recent_reviews,
+        'wishlist_ids': wishlist_ids,
     }
     return render(request, 'store/home.html', context)
 
@@ -68,6 +81,12 @@ def helmet_list(request):
     page = request.GET.get('page')
     helmets = paginator.get_page(page)
 
+    wishlist_ids = set()
+    if request.user.is_authenticated:
+        wishlist_ids = set(
+            WishlistItem.objects.filter(user=request.user).values_list('helmet_id', flat=True)
+        )
+
     context = {
         'helmets': helmets,
         'categories': Category.objects.all(),
@@ -75,6 +94,7 @@ def helmet_list(request):
         'sizes': Helmet.SIZES,
         'types': Helmet.HELMET_TYPES,
         'search_query': search or '',
+        'wishlist_ids': wishlist_ids,
     }
     return render(request, 'store/helmet_list.html', context)
 
@@ -88,19 +108,22 @@ def helmet_detail(request, slug):
     reviews = helmet.reviews.select_related('user', 'order').order_by('-created_at')
     avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
 
-    # Check if user has a paid/shipped/delivered order for this helmet
+    # Only users with a DELIVERED order can review
     has_purchased = False
     if request.user.is_authenticated:
         has_purchased = OrderItem.objects.filter(
             order__user=request.user,
             helmet=helmet,
-            order__status__in=['paid', 'shipped', 'delivered']
+            order__status='delivered'
         ).exists()
 
-    # Check if user already reviewed
     user_reviewed = False
     if request.user.is_authenticated:
         user_reviewed = Review.objects.filter(helmet=helmet, user=request.user).exists()
+
+    in_wishlist = False
+    if request.user.is_authenticated:
+        in_wishlist = WishlistItem.objects.filter(user=request.user, helmet=helmet).exists()
 
     size_guide = {
         'XS': '53-54 cm', 'S': '55-56 cm', 'M': '57-58 cm',
@@ -115,20 +138,48 @@ def helmet_detail(request, slug):
         'size_guide': size_guide,
         'has_purchased': has_purchased,
         'user_reviewed': user_reviewed,
+        'in_wishlist': in_wishlist,
     }
     return render(request, 'store/helmet_detail.html', context)
 
 
+# ==================== CART ====================
 @login_required
+@require_POST
 def add_to_cart(request, helmet_id):
     helmet = get_object_or_404(Helmet, id=helmet_id)
+
+    # ✅ Safety: block coming-soon items
+    if helmet.is_coming_soon:
+        return JsonResponse({
+            'success': False,
+            'message': f'"{helmet.name}" is not available yet. Coming soon!'
+        })
+
     cart = get_cart(request)
     cart_item, created = CartItem.objects.get_or_create(cart=cart, helmet=helmet)
+
     if not created:
+        if cart_item.quantity + 1 > helmet.stock:
+            return JsonResponse({
+                'success': False,
+                'message': f'Sorry, only {helmet.stock} unit(s) of "{helmet.name}" are available.'
+            })
         cart_item.quantity += 1
         cart_item.save()
-    messages.success(request, f'{helmet.name} added to cart!')
-    return redirect(request.META.get('HTTP_REFERER', 'store:home'))
+    else:
+        if helmet.stock < 1:
+            cart_item.delete()
+            return JsonResponse({
+                'success': False,
+                'message': f'"{helmet.name}" is currently out of stock.'
+            })
+
+    return JsonResponse({
+        'success': True,
+        'message': f'"{helmet.name}" added to cart!',
+        'cart_count': cart.get_item_count(),
+    })
 
 
 @login_required
@@ -138,44 +189,200 @@ def cart_detail(request):
 
 
 @login_required
+@require_POST
 def update_cart(request, item_id):
-    item = get_object_or_404(CartItem, id=item_id)
-    if request.method == 'POST':
-        quantity = int(request.POST.get('quantity', 1))
-        if quantity > 0 and quantity <= item.helmet.stock:
-            item.quantity = quantity
-            item.save()
-        else:
-            item.delete()
+    item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+    quantity = int(request.POST.get('quantity', 1))
+    cart = item.cart
+
+    if quantity < 1:
+        item.delete()
+        if is_ajax(request):
+            return JsonResponse({
+                'success': True,
+                'removed': True,
+                'message': 'Item removed from cart.',
+                'cart_count': cart.get_item_count(),
+                'cart_total': str(cart.get_total()),
+                'item_subtotal': None,
+            })
+        messages.info(request, 'Item removed from cart.')
+        return redirect('store:cart_detail')
+
+    if quantity > item.helmet.stock:
+        if is_ajax(request):
+            return JsonResponse({
+                'success': False,
+                'message': f'Only {item.helmet.stock} units available.',
+            })
+        messages.error(request, f'Only {item.helmet.stock} units available.')
+        return redirect('store:cart_detail')
+
+    item.quantity = quantity
+    item.save()
+
+    if is_ajax(request):
+        return JsonResponse({
+            'success': True,
+            'removed': False,
+            'message': 'Cart updated.',
+            'cart_count': cart.get_item_count(),
+            'cart_total': str(cart.get_total()),
+            'item_subtotal': str(item.get_subtotal()),
+        })
     return redirect('store:cart_detail')
 
 
 @login_required
+@require_POST
 def remove_from_cart(request, item_id):
-    item = get_object_or_404(CartItem, id=item_id)
+    item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+    cart = item.cart
     item.delete()
+
+    if is_ajax(request):
+        return JsonResponse({
+            'success': True,
+            'message': 'Item removed from cart.',
+            'cart_count': cart.get_item_count(),
+            'cart_total': str(cart.get_total()),
+        })
     messages.info(request, 'Item removed from cart.')
     return redirect('store:cart_detail')
+
+
+# ==================== WISHLIST ====================
+@login_required
+@require_POST
+def add_to_wishlist(request, helmet_id):
+    helmet = get_object_or_404(Helmet, id=helmet_id)
+    item = WishlistItem.objects.filter(user=request.user, helmet=helmet).first()
+
+    if item:
+        item.delete()
+        in_wishlist = False
+        message = f'"{helmet.name}" removed from wishlist.'
+    else:
+        WishlistItem.objects.create(user=request.user, helmet=helmet)
+        in_wishlist = True
+        message = f'"{helmet.name}" added to wishlist!'
+
+    wishlist_count = WishlistItem.objects.filter(user=request.user).count()
+
+    if is_ajax(request):
+        return JsonResponse({
+            'success': True,
+            'in_wishlist': in_wishlist,
+            'message': message,
+            'wishlist_count': wishlist_count,
+        })
+    messages.success(request, message)
+    return redirect(request.META.get('HTTP_REFERER', 'store:home'))
+
+
+@login_required
+@require_POST
+def remove_from_wishlist(request, helmet_id):
+    WishlistItem.objects.filter(user=request.user, helmet_id=helmet_id).delete()
+    if is_ajax(request):
+        return JsonResponse({
+            'success': True,
+            'message': 'Removed from wishlist.',
+            'wishlist_count': WishlistItem.objects.filter(user=request.user).count(),
+        })
+    return redirect('store:wishlist')
+
+
+@login_required
+def wishlist(request):
+    items = WishlistItem.objects.filter(user=request.user).select_related(
+        'helmet', 'helmet__brand'
+    )
+    return render(request, 'store/wishlist.html', {'items': items})
+
+
+# ==================== COMPARE ====================
+@require_POST
+def add_to_compare(request, helmet_id):
+    helmet = get_object_or_404(Helmet, id=helmet_id)
+    session_id = request.session.session_key
+    if not session_id:
+        request.session.create()
+        session_id = request.session.session_key
+
+    item = CompareItem.objects.filter(session_id=session_id, helmet=helmet).first()
+
+    if item:
+        item.delete()
+        in_compare = False
+        message = f'"{helmet.name}" removed from comparison.'
+    else:
+        current_count = CompareItem.objects.filter(session_id=session_id).count()
+        if current_count >= 3:
+            if is_ajax(request):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'You can compare up to 3 helmets only.',
+                })
+            messages.warning(request, 'You can only compare up to 3 helmets.')
+            return redirect(request.META.get('HTTP_REFERER', 'store:home'))
+        CompareItem.objects.create(session_id=session_id, helmet=helmet)
+        in_compare = True
+        message = f'"{helmet.name}" added to comparison.'
+
+    compare_count = CompareItem.objects.filter(session_id=session_id).count()
+
+    if is_ajax(request):
+        return JsonResponse({
+            'success': True,
+            'in_compare': in_compare,
+            'message': message,
+            'compare_count': compare_count,
+        })
+    messages.success(request, message)
+    return redirect(request.META.get('HTTP_REFERER', 'store:home'))
+
+
+@require_POST
+def remove_from_compare(request, helmet_id):
+    session_id = request.session.session_key
+    if session_id:
+        CompareItem.objects.filter(session_id=session_id, helmet_id=helmet_id).delete()
+    if is_ajax(request):
+        return JsonResponse({
+            'success': True,
+            'message': 'Removed from comparison.',
+            'compare_count': CompareItem.objects.filter(session_id=session_id).count() if session_id else 0,
+        })
+    return redirect('store:compare_list')
+
+
+def compare_list(request):
+    session_id = request.session.session_key
+    helmets = []
+    if session_id:
+        items = CompareItem.objects.filter(
+            session_id=session_id
+        ).select_related('helmet', 'helmet__brand')[:3]
+        helmets = [item.helmet for item in items]
+    return render(request, 'store/compare.html', {'helmets': helmets})
 
 
 # ==================== REVIEWS ====================
 @login_required
 def add_review(request, helmet_id):
-    """Review from the helmet detail page. Auto-detects verified purchase."""
     helmet = get_object_or_404(Helmet, id=helmet_id)
 
-    # Must have purchased
     purchased_item = OrderItem.objects.filter(
         order__user=request.user,
         helmet=helmet,
-        order__status__in=['paid', 'shipped', 'delivered']
+        order__status='delivered'
     ).select_related('order').first()
 
     if not purchased_item:
-        messages.error(request, 'You can only review helmets you have purchased!')
+        messages.error(request, 'You can only review helmets after your order has been delivered!')
         return redirect('store:helmet_detail', slug=helmet.slug)
 
-    # Already reviewed?
     if Review.objects.filter(helmet=helmet, user=request.user).exists():
         messages.warning(request, 'You have already reviewed this helmet!')
         return redirect('store:helmet_detail', slug=helmet.slug)
@@ -195,22 +402,19 @@ def add_review(request, helmet_id):
 
 @login_required
 def write_review_view(request, item_id):
-    """Review from the order detail page. Linked to the specific order."""
     order_item = get_object_or_404(
         OrderItem, id=item_id, order__user=request.user
     )
     order = order_item.order
     helmet = order_item.helmet
 
-    # Only eligible after payment
-    if order.status not in ['paid', 'shipped', 'delivered']:
+    if order.status != 'delivered':
         messages.error(
             request,
-            'You can only review after your order has been paid.'
+            'You can only review after your order has been delivered.'
         )
         return redirect('orders:order_detail', order_id=order.order_id)
 
-    # Already reviewed?
     existing = Review.objects.filter(helmet=helmet, user=request.user).first()
     if existing:
         messages.info(request, 'You have already reviewed this helmet.')
@@ -240,72 +444,12 @@ def write_review_view(request, item_id):
 
 @login_required
 def delete_review_view(request, review_id):
-    """Allow a user to delete their own review."""
     review = get_object_or_404(Review, id=review_id, user=request.user)
     slug = review.helmet.slug
     if request.method == 'POST':
         review.delete()
         messages.success(request, 'Your review has been deleted.')
     return redirect('store:helmet_detail', slug=slug)
-
-
-# ==================== WISHLIST ====================
-@login_required
-def add_to_wishlist(request, helmet_id):
-    helmet = get_object_or_404(Helmet, id=helmet_id)
-    WishlistItem.objects.get_or_create(user=request.user, helmet=helmet)
-    messages.success(request, 'Added to wishlist!')
-    return redirect(request.META.get('HTTP_REFERER', 'store:home'))
-
-
-@login_required
-def remove_from_wishlist(request, helmet_id):
-    WishlistItem.objects.filter(user=request.user, helmet_id=helmet_id).delete()
-    return redirect('store:wishlist')
-
-
-@login_required
-def wishlist(request):
-    items = WishlistItem.objects.filter(user=request.user).select_related(
-        'helmet', 'helmet__brand'
-    )
-    return render(request, 'store/wishlist.html', {'items': items})
-
-
-# ==================== COMPARE ====================
-def add_to_compare(request, helmet_id):
-    helmet = get_object_or_404(Helmet, id=helmet_id)
-    session_id = request.session.session_key
-    if not session_id:
-        request.session.create()
-        session_id = request.session.session_key
-
-    current_count = CompareItem.objects.filter(session_id=session_id).count()
-    if current_count >= 3:
-        messages.warning(request, 'You can only compare up to 3 helmets.')
-        return redirect(request.META.get('HTTP_REFERER', 'store:home'))
-
-    CompareItem.objects.get_or_create(session_id=session_id, helmet=helmet)
-    messages.success(request, f'{helmet.name} added to comparison.')
-    return redirect(request.META.get('HTTP_REFERER', 'store:home'))
-
-
-def remove_from_compare(request, helmet_id):
-    session_id = request.session.session_key
-    if session_id:
-        CompareItem.objects.filter(session_id=session_id, helmet_id=helmet_id).delete()
-    return redirect('store:compare_list')
-
-
-def compare_list(request):
-    session_id = request.session.session_key
-    helmets = []
-    if session_id:
-        items = CompareItem.objects.filter(
-            session_id=session_id
-        ).select_related('helmet', 'helmet__brand')[:3]
-        helmets = [item.helmet for item in items]
-    return render(request, 'store/compare.html', {'helmets': helmets})
 
 
 def size_finder(request):

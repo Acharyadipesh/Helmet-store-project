@@ -3,15 +3,85 @@
 
 {% block title %}{{ helmet.brand.name }} {{ helmet.name }} - HelmetHub{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Modern Breadcrumb */
+    .breadcrumb-bar {
+        background: white;
+        padding: 14px 24px;
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+        margin-bottom: 24px;
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .breadcrumb-bar .crumb-item {
+        display: inline-flex; align-items: center;
+        font-size: 0.9rem; font-weight: 500;
+        color: #888; text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 6px; border-radius: 8px;
+    }
+    .breadcrumb-bar .crumb-item:hover { color: var(--primary); background: #fff5ef; }
+    .breadcrumb-bar .crumb-item.home-crumb i { color: var(--primary); margin-right: 4px; font-size: 0.85rem; }
+    .breadcrumb-bar .crumb-separator { color: #ccc; font-size: 0.75rem; margin: 0 2px; }
+    .breadcrumb-bar .crumb-current {
+        color: var(--dark); font-weight: 600; font-size: 0.9rem;
+        padding: 4px 6px; display: inline-flex; align-items: center;
+        max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .breadcrumb-bar .crumb-current i { color: var(--primary); margin-right: 6px; font-size: 0.75rem; }
+
+    @media (max-width: 576px) {
+        .breadcrumb-bar { padding: 10px 16px; border-radius: 12px; }
+        .breadcrumb-bar .crumb-item, .breadcrumb-bar .crumb-current { font-size: 0.8rem; }
+    }
+
+    /* Related Product Card */
+    .related-card {
+        background: #fff; border-radius: 16px; overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        transition: all 0.3s ease; height: 100%;
+        display: flex; flex-direction: column; position: relative;
+    }
+    .related-card:hover { transform: translateY(-6px); box-shadow: 0 14px 32px rgba(0,0,0,0.12); }
+    .related-card .stretched-link::after { z-index: 1; border-radius: 16px; }
+    .related-img {
+        height: 180px; background: #f8f9fa;
+        display: flex; align-items: center; justify-content: center; padding: 12px;
+    }
+    .related-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .related-img .placeholder-icon { font-size: 3rem; color: #ccc; }
+    .related-body { padding: 14px; display: flex; flex-direction: column; flex: 1; }
+    .related-brand {
+        font-size: 0.72rem; text-transform: uppercase;
+        color: var(--primary); font-weight: 600;
+        letter-spacing: 0.5px; margin-bottom: 2px;
+    }
+    .related-name {
+        font-size: 0.95rem; font-weight: 700; color: var(--dark);
+        margin-bottom: 6px; line-height: 1.3; min-height: 2.4rem; transition: color 0.2s;
+    }
+    .related-card:hover .related-name { color: var(--primary); }
+    .related-price { font-size: 1.05rem; font-weight: 800; color: var(--primary); margin-top: auto; }
+    .related-price .old-price {
+        font-size: 0.8rem; color: #999; text-decoration: line-through;
+        margin-left: 6px; font-weight: 400;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'store:home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'store:helmet_list' %}">Shop</a></li>
-            <li class="breadcrumb-item active">{{ helmet.brand.name }} {{ helmet.name }}</li>
-        </ol>
+    <!-- Modern Breadcrumb -->
+    <nav class="breadcrumb-bar" aria-label="breadcrumb">
+        <a href="{% url 'store:home' %}" class="crumb-item home-crumb"><i class="fas fa-home"></i>Home</a>
+        <span class="crumb-separator"><i class="fas fa-chevron-right"></i></span>
+        <a href="{% url 'store:helmet_list' %}" class="crumb-item">Shop</a>
+        <span class="crumb-separator"><i class="fas fa-chevron-right"></i></span>
+        <span class="crumb-current"><i class="fas fa-circle"></i>{{ helmet.brand.name }} {{ helmet.name }}</span>
     </nav>
 
     <div class="row g-5">
@@ -19,11 +89,15 @@
         <div class="col-lg-6">
             <div class="card border-0 rounded-4 overflow-hidden shadow-sm">
                 <div class="bg-light d-flex align-items-center justify-content-center" style="min-height: 450px;">
-                    {% if helmet.image %}
-                    <img src="{{ helmet.image.url }}" alt="{{ helmet.name }}" class="img-fluid" style="max-height: 400px; object-fit: contain;">
-                    {% else %}
-                    <i class="fas fa-helmet-safety fa-6x text-muted"></i>
-                    {% endif %}
+                    {% with first_gallery=helmet.images.first %}
+                        {% if helmet.image %}
+                            <img src="{{ helmet.image.url }}" alt="{{ helmet.name }}" class="img-fluid" style="max-height: 400px; object-fit: contain;">
+                        {% elif first_gallery %}
+                            <img src="{{ first_gallery.image.url }}" alt="{{ helmet.name }}" class="img-fluid" style="max-height: 400px; object-fit: contain;">
+                        {% else %}
+                            <i class="fas fa-helmet-safety fa-6x text-muted"></i>
+                        {% endif %}
+                    {% endwith %}
                 </div>
             </div>
             {% if helmet.images.exists %}
@@ -72,37 +146,25 @@
                 <div class="col-6">
                     <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
                         <i class="fas fa-ruler-combined fa-lg me-3" style="color: var(--primary);"></i>
-                        <div>
-                            <small class="text-muted d-block">Size</small>
-                            <strong>{{ helmet.get_size_display }}</strong>
-                        </div>
+                        <div><small class="text-muted d-block">Size</small><strong>{{ helmet.get_size_display }}</strong></div>
                     </div>
                 </div>
                 <div class="col-6">
                     <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
                         <i class="fas fa-weight-hanging fa-lg me-3" style="color: var(--primary);"></i>
-                        <div>
-                            <small class="text-muted d-block">Weight</small>
-                            <strong>{{ helmet.weight }} kg</strong>
-                        </div>
+                        <div><small class="text-muted d-block">Weight</small><strong>{{ helmet.weight }} kg</strong></div>
                     </div>
                 </div>
                 <div class="col-6">
                     <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
                         <i class="fas fa-certificate fa-lg me-3" style="color: var(--primary);"></i>
-                        <div>
-                            <small class="text-muted d-block">Certification</small>
-                            <strong>{{ helmet.get_certification_display }}</strong>
-                        </div>
+                        <div><small class="text-muted d-block">Certification</small><strong>{{ helmet.get_certification_display }}</strong></div>
                     </div>
                 </div>
                 <div class="col-6">
                     <div class="d-flex align-items-center p-3 rounded-3" style="background: #f8f9fa;">
                         <i class="fas fa-palette fa-lg me-3" style="color: var(--primary);"></i>
-                        <div>
-                            <small class="text-muted d-block">Color</small>
-                            <strong>{{ helmet.color }}</strong>
-                        </div>
+                        <div><small class="text-muted d-block">Color</small><strong>{{ helmet.color }}</strong></div>
                     </div>
                 </div>
             </div>
@@ -112,37 +174,43 @@
                 <h6 class="fw-bold mb-2">Features:</h6>
                 <div class="d-flex flex-wrap gap-2">
                     <span class="badge bg-light text-dark border"><i class="fas fa-wind me-1"></i>Ventilation</span>
-                    {% if helmet.bluetooth_ready %}
-                    <span class="badge bg-light text-dark border"><i class="fas fa-bluetooth-b me-1"></i>Bluetooth Ready</span>
-                    {% endif %}
-                    {% if helmet.sun_visor %}
-                    <span class="badge bg-light text-dark border"><i class="fas fa-sun me-1"></i>Sun Visor</span>
-                    {% endif %}
+                    {% if helmet.bluetooth_ready %}<span class="badge bg-light text-dark border"><i class="fas fa-bluetooth-b me-1"></i>Bluetooth Ready</span>{% endif %}
+                    {% if helmet.sun_visor %}<span class="badge bg-light text-dark border"><i class="fas fa-sun me-1"></i>Sun Visor</span>{% endif %}
                     <span class="badge bg-light text-dark border"><i class="fas fa-layer-group me-1"></i>{{ helmet.material }}</span>
                 </div>
             </div>
 
-            <!-- Stock -->
+            <!-- Stock Status -->
             <div class="mb-4">
-                {% if helmet.stock > 0 %}
-                <span class="badge bg-success rounded-pill px-3 py-2"><i class="fas fa-check-circle me-1"></i>In Stock ({{ helmet.stock }} left)</span>
+                {% if helmet.is_coming_soon %}
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2"><i class="fas fa-clock me-1"></i>Coming Soon — Available Shortly</span>
+                {% elif helmet.stock > 0 %}
+                    <span class="badge bg-success rounded-pill px-3 py-2"><i class="fas fa-check-circle me-1"></i>In Stock ({{ helmet.stock }} left)</span>
                 {% else %}
-                <span class="badge bg-danger rounded-pill px-3 py-2"><i class="fas fa-times-circle me-1"></i>Out of Stock</span>
+                    <span class="badge bg-danger rounded-pill px-3 py-2"><i class="fas fa-times-circle me-1"></i>Out of Stock</span>
                 {% endif %}
             </div>
 
             <!-- Actions -->
             <div class="d-flex gap-3 mb-5">
-                <a href="{% url 'store:add_to_cart' helmet.id %}" class="btn btn-hero btn-lg flex-grow-1">
-                    <i class="fas fa-shopping-cart me-2"></i>Add to Cart
-                </a>
-                <a href="{% url 'store:add_to_compare' helmet.id %}" class="btn btn-outline-dark btn-lg px-4 rounded-3">
-                    <i class="fas fa-balance-scale"></i>
-                </a>
+                {% if helmet.is_coming_soon %}
+                    <button type="button" class="btn btn-warning btn-lg flex-grow-1" disabled style="opacity: 0.85;">
+                        <i class="fas fa-clock me-2"></i>Coming Soon
+                    </button>
+                {% elif helmet.stock > 0 %}
+                    <button type="button" class="btn btn-hero btn-lg flex-grow-1 js-add-to-cart" data-helmet-id="{{ helmet.id }}">
+                        <i class="fas fa-shopping-cart me-2"></i>Add to Cart
+                    </button>
+                {% else %}
+                    <button type="button" class="btn btn-hero btn-lg flex-grow-1" disabled style="opacity: 0.5;">
+                        <i class="fas fa-times-circle me-2"></i>Out of Stock
+                    </button>
+                {% endif %}
+                <button type="button" class="btn btn-outline-dark btn-lg px-4 rounded-3 js-toggle-compare" data-helmet-id="{{ helmet.id }}"><i class="fas fa-balance-scale"></i></button>
                 {% if user.is_authenticated %}
-                <a href="{% url 'store:add_to_wishlist' helmet.id %}" class="btn btn-outline-danger btn-lg px-4 rounded-3">
-                    <i class="far fa-heart"></i>
-                </a>
+                <button type="button" class="btn btn-outline-danger btn-lg px-4 rounded-3 js-toggle-wishlist {% if in_wishlist %}active{% endif %}" data-helmet-id="{{ helmet.id }}">
+                    <i class="{% if in_wishlist %}fas{% else %}far{% endif %} fa-heart"></i>
+                </button>
                 {% endif %}
             </div>
 
@@ -152,17 +220,11 @@
                     <h6 class="fw-bold mb-3"><i class="fas fa-ruler me-2"></i>Size Guide</h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-borderless mb-0">
-                            <thead>
-                                <tr class="text-muted">
-                                    <th>Size</th>
-                                    <th>Head Circumference</th>
-                                </tr>
-                            </thead>
+                            <thead><tr class="text-muted"><th>Size</th><th>Head Circumference</th></tr></thead>
                             <tbody>
                                 {% for size, cm in size_guide.items %}
                                 <tr class="{% if size == helmet.size %}fw-bold text-primary{% endif %}">
-                                    <td>{{ size }}</td>
-                                    <td>{{ cm }}</td>
+                                    <td>{{ size }}</td><td>{{ cm }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -187,11 +249,8 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">Rating</label>
                             <select name="rating" class="form-select" style="max-width: 150px;">
-                                <option value="5">5 Stars</option>
-                                <option value="4">4 Stars</option>
-                                <option value="3">3 Stars</option>
-                                <option value="2">2 Stars</option>
-                                <option value="1">1 Star</option>
+                                <option value="5">5 Stars</option><option value="4">4 Stars</option>
+                                <option value="3">3 Stars</option><option value="2">2 Stars</option><option value="1">1 Star</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -201,39 +260,30 @@
                         <button type="submit" class="btn btn-hero">Submit Review</button>
                     </form>
                     {% elif user.is_authenticated and user_reviewed %}
-                        <div class="alert alert-info rounded-4 mb-4">
-                            <i class="fas fa-check-circle me-2"></i>You have already reviewed this helmet.
-                        </div>
+                        <div class="alert alert-info rounded-4 mb-4"><i class="fas fa-check-circle me-2"></i>You have already reviewed this helmet.</div>
                     {% elif user.is_authenticated %}
-                        <div class="alert alert-light rounded-4 mb-4 border">
-                            <i class="fas fa-info-circle me-2"></i>Only verified buyers can review this helmet.
-                        </div>
+                        <div class="alert alert-light rounded-4 mb-4 border"><i class="fas fa-info-circle me-2"></i>Only verified buyers can review this helmet.</div>
                     {% endif %}
 
                     {% for review in reviews %}
                     <div class="border-bottom pb-4 mb-4">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="d-flex align-items-center">
-                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
-                                     style="width: 40px; height: 40px; font-weight: 700;">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: 700;">
                                     {{ review.user.first_name|default:review.user.username|first|upper }}
                                 </div>
                                 <div>
                                     <h6 class="fw-bold mb-0">
                                         {{ review.user.first_name|default:review.user.username }}
                                         {% if review.is_verified_purchase %}
-                                            <span class="badge bg-success ms-2" style="font-size: 0.7rem;">
-                                                <i class="fas fa-check-circle me-1"></i>Verified Purchase
-                                            </span>
+                                            <span class="badge bg-success ms-2" style="font-size: 0.7rem;"><i class="fas fa-check-circle me-1"></i>Verified Purchase</span>
                                         {% endif %}
                                     </h6>
                                     <small class="text-muted">{{ review.created_at|date:"F d, Y" }}</small>
                                 </div>
                             </div>
                             <div class="text-warning">
-                                {% for i in "12345" %}
-                                <i class="fas fa-star{% if forloop.counter > review.rating %} text-muted{% endif %}"></i>
-                                {% endfor %}
+                                {% for i in "12345" %}<i class="fas fa-star{% if forloop.counter > review.rating %} text-muted{% endif %}"></i>{% endfor %}
                             </div>
                         </div>
                         <p class="text-muted mb-2">{{ review.comment }}</p>
@@ -241,8 +291,7 @@
                         {% if review.user == request.user %}
                             <form method="post" action="{% url 'store:delete_review' review.id %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Delete your review?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete your review?');">
                                     <i class="fas fa-trash me-1"></i>Delete
                                 </button>
                             </form>
@@ -262,23 +311,33 @@
     <!-- Related Products -->
     {% if related %}
     <div class="mt-5">
-        <h3 class="fw-bold mb-4">You May Also Like</h3>
+        <div class="text-center mb-4">
+            <h3 class="fw-bold mb-2">You May Also Like</h3>
+            <p class="text-muted mb-0">Similar helmets from the same category</p>
+        </div>
         <div class="row g-4">
             {% for h in related %}
             <div class="col-6 col-lg-3">
-                <div class="product-card">
-                    <div class="product-img-wrapper">
-                        {% if h.image %}
-                        <img src="{{ h.image.url }}" alt="{{ h.name }}">
-                        {% else %}
-                        <i class="fas fa-helmet-safety fa-4x text-muted"></i>
-                        {% endif %}
+                <div class="related-card">
+                    <a href="{% url 'store:helmet_detail' h.slug %}" class="stretched-link" aria-label="View {{ h.name }}"></a>
+                    <div class="related-img">
+                        {% with first_gallery=h.images.first %}
+                            {% if h.image %}
+                                <img src="{{ h.image.url }}" alt="{{ h.name }}">
+                            {% elif first_gallery %}
+                                <img src="{{ first_gallery.image.url }}" alt="{{ h.name }}">
+                            {% else %}
+                                <i class="fas fa-helmet-safety placeholder-icon"></i>
+                            {% endif %}
+                        {% endwith %}
                     </div>
-                    <div class="product-body">
-                        <div class="product-brand">{{ h.brand.name }}</div>
-                        <h6 class="product-name">{{ h.name }}</h6>
-                        <div class="product-price">NRs {{ h.get_price }}</div>
-                        <a href="{% url 'store:helmet_detail' h.slug %}" class="btn btn-add-cart mt-2">View Details</a>
+                    <div class="related-body">
+                        <div class="related-brand">{{ h.brand.name }}</div>
+                        <h6 class="related-name">{{ h.name }}</h6>
+                        <div class="related-price">
+                            NRs {{ h.get_price }}
+                            {% if h.discount_price %}<span class="old-price">NRs {{ h.price }}</span>{% endif %}
+                        </div>
                     </div>
                 </div>
             </div>

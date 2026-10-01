@@ -17,11 +17,16 @@ urlpatterns = [
     path('review/write/<int:item_id>/', views.write_review_view, name='write_review'),
     path('review/delete/<int:review_id>/', views.delete_review_view, name='delete_review'),
 
+    # Wishlist
     path('wishlist/', views.wishlist, name='wishlist'),
     path('wishlist/add/<int:helmet_id>/', views.add_to_wishlist, name='add_to_wishlist'),
     path('wishlist/remove/<int:helmet_id>/', views.remove_from_wishlist, name='remove_from_wishlist'),
+
+    # Compare
     path('compare/', views.compare_list, name='compare_list'),
     path('compare/add/<int:helmet_id>/', views.add_to_compare, name='add_to_compare'),
     path('compare/remove/<int:helmet_id>/', views.remove_from_compare, name='remove_from_compare'),
+
+    # Size finder
     path('size-finder/', views.size_finder, name='size_finder'),
 ]

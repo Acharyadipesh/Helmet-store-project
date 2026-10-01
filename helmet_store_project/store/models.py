@@ -71,6 +71,7 @@ class Helmet(models.Model):
     stock = models.PositiveIntegerField(default=10)
     is_available = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
+    is_coming_soon = models.BooleanField(default=False)   # ← NEW
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -96,6 +97,28 @@ class Helmet(models.Model):
     def get_avg_rating(self):
         avg = self.reviews.aggregate(Avg('rating'))['rating__avg']
         return round(avg, 1) if avg else 0
+
+    def get_stock_status(self):
+        """Returns 'coming_soon', 'in_stock', or 'out_of_stock'."""
+        if self.is_coming_soon:
+            return 'coming_soon'
+        if self.stock > 0:
+            return 'in_stock'
+        return 'out_of_stock'
+
+    def get_stock_label(self):
+        if self.is_coming_soon:
+            return 'Coming Soon'
+        if self.stock > 0:
+            return 'In Stock'
+        return 'Out of Stock'
+
+    def get_stock_badge_color(self):
+        if self.is_coming_soon:
+            return 'warning'
+        if self.stock > 0:
+            return 'success'
+        return 'danger'
 
 
 class HelmetImage(models.Model):

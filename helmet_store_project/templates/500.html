@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Server Error - HelmetHub{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center" style="min-height: 60vh; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+    <h1 class="display-1 fw-bold" style="color: var(--primary); font-size: 8rem;">500</h1>
+    <h3 class="fw-bold mb-3">Something Went Wrong</h3>
+    <p class="text-muted mb-4">Our server ran into an issue. Please try again in a moment.</p>
+    <a href="{% url 'store:home' %}" class="btn btn-hero btn-lg">
+        <i class="fas fa-home me-2"></i>Go Home
+    </a>
+</div>
+{% endblock %}

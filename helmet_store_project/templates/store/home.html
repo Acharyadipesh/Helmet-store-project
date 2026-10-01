@@ -5,7 +5,6 @@
 
 {% block extra_css %}
 <style>
-    /* ---------- Product Card Styling ---------- */
     .product-card {
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         background: #fff;
@@ -14,119 +13,110 @@
         height: 100%;
         display: flex;
         flex-direction: column;
+        position: relative;
     }
-    .product-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-    }
+    .product-card:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
+    .product-card .stretched-link::after { z-index: 1; border-radius: 16px; }
+    .product-actions { position: relative; z-index: 2; }
+    .product-img-wrapper .carousel-control-prev,
+    .product-img-wrapper .carousel-control-next { z-index: 3; }
 
     .product-img-wrapper {
         position: relative;
         background: #f8f9fa;
-        height: 220px;          /* fixed height for consistent cards */
+        height: 220px;
         overflow: hidden;
     }
     .product-img-wrapper .carousel,
     .product-img-wrapper .carousel-inner,
-    .product-img-wrapper .carousel-item {
-        height: 100%;
-    }
+    .product-img-wrapper .carousel-item { height: 100%; }
     .product-img-wrapper .carousel-item img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;    /* show full image without cropping */
-        background: #fff;
-        padding: 8px;
+        width: 100%; height: 100%; object-fit: contain; background: #fff; padding: 8px;
     }
 
-    /* Badge positions */
-    .badge-featured, .badge-discount {
-        position: absolute;
-        z-index: 10;
-        padding: 5px 14px;
-        border-radius: 30px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.3px;
+    .badge-featured, .badge-discount, .badge-stock-overlay {
+        position: absolute; z-index: 10;
+        padding: 5px 14px; border-radius: 30px;
+        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px;
     }
-    .badge-featured {
-        top: 12px;
-        left: 12px;
-        background: #0d6efd;
-        color: #fff;
+    .badge-featured { top: 12px; left: 12px; background: #0d6efd; color: #fff; }
+    .badge-discount { top: 12px; right: 12px; background: #dc3545; color: #fff; }
+    .badge-stock-overlay {
+        bottom: 12px; left: 12px;
+        background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
     }
-    .badge-discount {
-        top: 12px;
-        right: 12px;
-        background: #dc3545;
-        color: #fff;
+    .badge-stock-overlay.in-stock { color: #198754; border: 1.5px solid #198754; }
+    .badge-stock-overlay.out-of-stock { color: #dc3545; border: 1.5px solid #dc3545; }
+    .badge-stock-overlay.coming-soon { color: #b8860b; background: #fff8e1; border: 1.5px solid #ffc107; }
+    .badge-stock-overlay i { margin-right: 4px; }
+
+    .product-card.coming-soon-card .product-img-wrapper::after {
+        content: ''; position: absolute; inset: 0;
+        background: rgba(255,255,255,0.35); z-index: 5; pointer-events: none;
     }
 
-    /* Carousel controls – more visible on hover */
-    .carousel-control-prev-icon,
-    .carousel-control-next-icon {
-        background-color: rgba(0,0,0,0.5);
-        border-radius: 50%;
-        padding: 20px;
-        background-size: 60%;
+    .carousel-control-prev-icon, .carousel-control-next-icon {
+        background-color: rgba(0,0,0,0.5); border-radius: 50%;
+        padding: 20px; background-size: 60%;
     }
-    .carousel-control-prev,
-    .carousel-control-next {
-        width: 10%;
-        opacity: 0;
-        transition: opacity 0.2s;
+    .carousel-control-prev, .carousel-control-next {
+        width: 10%; opacity: 0; transition: opacity 0.2s;
     }
     .product-img-wrapper:hover .carousel-control-prev,
-    .product-img-wrapper:hover .carousel-control-next {
-        opacity: 1;
-    }
+    .product-img-wrapper:hover .carousel-control-next { opacity: 1; }
 
-    /* Product body */
-    .product-body {
-        padding: 1rem 1rem 1.2rem;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
+    .product-body { padding: 1rem 1rem 1.2rem; flex: 1; display: flex; flex-direction: column; }
     .product-brand {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        color: #6c757d;
-        letter-spacing: 0.5px;
-        margin-bottom: 2px;
+        font-size: 0.8rem; text-transform: uppercase; color: #6c757d;
+        letter-spacing: 0.5px; margin-bottom: 2px;
     }
     .product-name {
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: 6px;
-        line-height: 1.3;
-        min-height: 2.6rem;
+        font-size: 1rem; font-weight: 600; margin-bottom: 6px;
+        line-height: 1.3; min-height: 2.6rem; color: var(--dark); transition: color 0.2s;
     }
-    .product-price {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #212529;
-    }
+    .product-card:hover .product-name { color: var(--primary); }
+    .product-price { font-size: 1.15rem; font-weight: 700; color: var(--primary, #ff6b35); }
     .old-price {
-        font-size: 0.85rem;
-        font-weight: 400;
-        color: #6c757d;
-        text-decoration: line-through;
-        margin-left: 8px;
+        font-size: 0.85rem; font-weight: 400; color: #6c757d;
+        text-decoration: line-through; margin-left: 8px;
     }
-    .btn-add-cart {
-        background: #0d6efd;
-        color: #fff;
-        border: none;
-        border-radius: 30px;
-        padding: 6px 16px;
-        font-size: 0.85rem;
-        transition: background 0.2s;
+
+    .product-actions { display: flex; align-items: center; gap: 8px; margin-top: auto; }
+    .btn-card-cart {
+        flex: 1;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white; border: none; border-radius: 12px;
+        padding: 10px 14px; font-size: 0.85rem; font-weight: 600;
+        display: inline-flex; align-items: center; justify-content: center;
+        gap: 6px; transition: all 0.25s; white-space: nowrap; cursor: pointer;
     }
-    .btn-add-cart:hover {
-        background: #0b5ed7;
-        color: #fff;
+    .btn-card-cart:hover {
+        transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,107,53,0.35); color: white;
     }
+    .btn-card-cart:disabled {
+        opacity: 0.6; cursor: not-allowed; transform: none;
+        box-shadow: none; background: #cbd5e1; color: #64748b;
+    }
+    .btn-card-cart.coming-soon-btn {
+        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: white;
+    }
+    .btn-card-cart.coming-soon-btn:disabled {
+        opacity: 0.85;
+        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: white;
+    }
+
+    .btn-icon-action {
+        width: 40px; height: 40px; min-width: 40px; border-radius: 12px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: #f8f9fa; border: 1.5px solid #e5e7eb;
+        color: #4b5563; font-size: 0.95rem; transition: all 0.25s;
+        cursor: pointer; padding: 0;
+    }
+    .btn-icon-action:hover { background: white; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+    .btn-icon-compare:hover { border-color: var(--dark); color: var(--dark); }
+    .btn-icon-wishlist:hover { border-color: #dc3545; color: #dc3545; }
+    .btn-icon-wishlist.active { background: #fee2e2; border-color: #dc3545; color: #dc3545; }
+    .btn-icon-compare.active { background: #e0e7ff; border-color: var(--dark); color: var(--dark); }
 </style>
 {% endblock %}
 
@@ -162,30 +152,10 @@
 <div class="container">
     <div class="stats-bar">
         <div class="row">
-            <div class="col-6 col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">50+</div>
-                    <div class="stat-label">Helmet Models</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">15+</div>
-                    <div class="stat-label">Top Brands</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">6</div>
-                    <div class="stat-label">Size Options</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">24h</div>
-                    <div class="stat-label">Fast Shipping</div>
-                </div>
-            </div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="stat-number">50+</div><div class="stat-label">Helmet Models</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="stat-number">15+</div><div class="stat-label">Top Brands</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="stat-number">6</div><div class="stat-label">Size Options</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-item"><div class="stat-number">24h</div><div class="stat-label">Fast Shipping</div></div></div>
         </div>
     </div>
 </div>
@@ -200,45 +170,42 @@
         <div class="row g-4">
             {% for helmet in featured %}
             <div class="col-6 col-lg-3">
-                <div class="product-card">
+                <div class="product-card {% if helmet.is_coming_soon %}coming-soon-card{% endif %}">
+                    <a href="{% url 'store:helmet_detail' helmet.slug %}" class="stretched-link" aria-label="View {{ helmet.name }}"></a>
+
                     <div class="product-img-wrapper">
-                        {% if helmet.is_featured %}
-                        <span class="badge-featured">Featured</span>
-                        {% endif %}
-                        {% if helmet.discount_price %}
-                        <span class="badge-discount">-{{ helmet.get_discount_percentage }}%</span>
-                        {% endif %}
+                        {% if helmet.is_featured %}<span class="badge-featured">Featured</span>{% endif %}
+                        {% if helmet.discount_price %}<span class="badge-discount">-{{ helmet.get_discount_percentage }}%</span>{% endif %}
+
+                        <span class="badge-stock-overlay {{ helmet.get_stock_status }}">
+                            {% if helmet.is_coming_soon %}
+                                <i class="fas fa-clock"></i>Coming Soon
+                            {% elif helmet.stock > 0 %}
+                                <i class="fas fa-check-circle"></i>In Stock
+                            {% else %}
+                                <i class="fas fa-times-circle"></i>Out of Stock
+                            {% endif %}
+                        </span>
                         
                         {% with gallery_images=helmet.images.all %}
                             {% if helmet.image or gallery_images %}
                                 <div id="carousel-featured-{{ helmet.id }}" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3500">
                                     <div class="carousel-inner">
                                         {% if helmet.image %}
-                                            <div class="carousel-item active">
-                                                <img src="{{ helmet.image.url }}" alt="{{ helmet.name }}">
-                                            </div>
+                                            <div class="carousel-item active"><img src="{{ helmet.image.url }}" alt="{{ helmet.name }}"></div>
                                         {% endif %}
                                         {% for img in gallery_images %}
-                                            <div class="carousel-item {% if not helmet.image and forloop.first %}active{% endif %}">
-                                                <img src="{{ img.image.url }}" alt="{{ helmet.name }}">
-                                            </div>
+                                            <div class="carousel-item {% if not helmet.image and forloop.first %}active{% endif %}"><img src="{{ img.image.url }}" alt="{{ helmet.name }}"></div>
                                         {% endfor %}
                                     </div>
                                     {% if gallery_images|length > 1 or helmet.image and gallery_images %}
-                                        <button class="carousel-control-prev" type="button" data-bs-target="#carousel-featured-{{ helmet.id }}" data-bs-slide="prev">
-                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                            <span class="visually-hidden">Previous</span>
-                                        </button>
-                                        <button class="carousel-control-next" type="button" data-bs-target="#carousel-featured-{{ helmet.id }}" data-bs-slide="next">
-                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                            <span class="visually-hidden">Next</span>
-                                        </button>
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#carousel-featured-{{ helmet.id }}" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#carousel-featured-{{ helmet.id }}" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
                                     {% endif %}
                                 </div>
                             {% else %}
                                 <div class="text-center text-muted d-flex flex-column align-items-center justify-content-center h-100">
-                                    <i class="fas fa-helmet-safety fa-4x mb-2"></i>
-                                    <p>No Image</p>
+                                    <i class="fas fa-helmet-safety fa-4x mb-2"></i><p>No Image</p>
                                 </div>
                             {% endif %}
                         {% endwith %}
@@ -246,46 +213,49 @@
                     <div class="product-body">
                         <div class="product-brand">{{ helmet.brand.name }}</div>
                         <h5 class="product-name">{{ helmet.name }}</h5>
+                        <div class="product-price mb-2">
+                            NRs {{ helmet.get_price }}
+                            {% if helmet.discount_price %}<span class="old-price">NRs {{ helmet.price }}</span>{% endif %}
+                        </div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="product-price">
-                                NRs {{ helmet.get_price }}
-                                {% if helmet.discount_price %}
-                                <span class="old-price">NRs {{ helmet.price }}</span>
-                                {% endif %}
-                            </div>
-                            <div class="mb-2">
+                            <div>
                                 <span class="text-warning">
-                                    {% for i in "12345" %}
-                                    <i class="fas fa-star{% if forloop.counter > helmet.get_avg_rating %} text-muted{% endif %}" style="font-size: 0.8rem;"></i>
-                                    {% endfor %}
+                                    {% for i in "12345" %}<i class="fas fa-star{% if forloop.counter > helmet.get_avg_rating %} text-muted{% endif %}" style="font-size: 0.8rem;"></i>{% endfor %}
                                 </span>
                                 <small class="text-muted">({{ helmet.reviews.count }})</small>
                             </div>
                             <small class="text-muted">{{ helmet.get_helmet_type_display }}</small>
                         </div>
-                        <div class="d-flex gap-2 mt-auto">
-                            <a href="{% url 'store:add_to_cart' helmet.id %}" class="btn btn-add-cart flex-grow-1">
-                                <i class="fas fa-cart-plus me-1"></i>Add to Cart
-                            </a>
+                        <div class="product-actions">
+                            {% if helmet.is_coming_soon %}
+                                <button type="button" class="btn-card-cart coming-soon-btn" disabled>
+                                    <i class="fas fa-clock"></i> Coming Soon
+                                </button>
+                            {% elif helmet.stock > 0 %}
+                                <button type="button" class="btn-card-cart js-add-to-cart" data-helmet-id="{{ helmet.id }}">
+                                    <i class="fas fa-shopping-cart"></i> Add to Cart
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn-card-cart" disabled>
+                                    <i class="fas fa-times-circle"></i> Out of Stock
+                                </button>
+                            {% endif %}
+                            <button type="button" class="btn-icon-action btn-icon-compare js-toggle-compare" data-helmet-id="{{ helmet.id }}" title="Compare"><i class="fas fa-balance-scale"></i></button>
                             {% if user.is_authenticated %}
-                            <a href="{% url 'store:add_to_wishlist' helmet.id %}" class="btn btn-outline-danger rounded-3 px-3">
-                                <i class="far fa-heart"></i>
-                            </a>
+                            <button type="button" class="btn-icon-action btn-icon-wishlist js-toggle-wishlist {% if helmet.id in wishlist_ids %}active{% endif %}" data-helmet-id="{{ helmet.id }}" title="Wishlist">
+                                <i class="{% if helmet.id in wishlist_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+                            </button>
                             {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
             {% empty %}
-            <div class="col-12 text-center py-5">
-                <p class="text-muted">No featured helmets yet. Add some from the admin panel!</p>
-            </div>
+            <div class="col-12 text-center py-5"><p class="text-muted">No featured helmets yet.</p></div>
             {% endfor %}
         </div>
         <div class="text-center mt-5">
-            <a href="{% url 'store:helmet_list' %}" class="btn btn-hero btn-lg">
-                View All Helmets <i class="fas fa-arrow-right ms-2"></i>
-            </a>
+            <a href="{% url 'store:helmet_list' %}" class="btn btn-hero btn-lg">View All Helmets <i class="fas fa-arrow-right ms-2"></i></a>
         </div>
     </div>
 </section>
@@ -327,40 +297,42 @@
         <div class="row g-4">
             {% for helmet in new_arrivals %}
             <div class="col-6 col-lg-3">
-                <div class="product-card">
+                <div class="product-card {% if helmet.is_coming_soon %}coming-soon-card{% endif %}">
+                    <a href="{% url 'store:helmet_detail' helmet.slug %}" class="stretched-link" aria-label="View {{ helmet.name }}"></a>
+
                     <div class="product-img-wrapper">
-                        <span class="badge bg-success" style="position: absolute; top: 15px; left: 15px; z-index: 2; border-radius: 20px;">New</span>
+                        <span class="badge-featured">New</span>
+                        {% if helmet.discount_price %}<span class="badge-discount">-{{ helmet.get_discount_percentage }}%</span>{% endif %}
+
+                        <span class="badge-stock-overlay {{ helmet.get_stock_status }}">
+                            {% if helmet.is_coming_soon %}
+                                <i class="fas fa-clock"></i>Coming Soon
+                            {% elif helmet.stock > 0 %}
+                                <i class="fas fa-check-circle"></i>In Stock
+                            {% else %}
+                                <i class="fas fa-times-circle"></i>Out of Stock
+                            {% endif %}
+                        </span>
                         
                         {% with gallery_images=helmet.images.all %}
                             {% if helmet.image or gallery_images %}
                                 <div id="carousel-new-{{ helmet.id }}" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3500">
                                     <div class="carousel-inner">
                                         {% if helmet.image %}
-                                            <div class="carousel-item active">
-                                                <img src="{{ helmet.image.url }}" alt="{{ helmet.name }}">
-                                            </div>
+                                            <div class="carousel-item active"><img src="{{ helmet.image.url }}" alt="{{ helmet.name }}"></div>
                                         {% endif %}
                                         {% for img in gallery_images %}
-                                            <div class="carousel-item {% if not helmet.image and forloop.first %}active{% endif %}">
-                                                <img src="{{ img.image.url }}" alt="{{ helmet.name }}">
-                                            </div>
+                                            <div class="carousel-item {% if not helmet.image and forloop.first %}active{% endif %}"><img src="{{ img.image.url }}" alt="{{ helmet.name }}"></div>
                                         {% endfor %}
                                     </div>
                                     {% if gallery_images|length > 1 or helmet.image and gallery_images %}
-                                        <button class="carousel-control-prev" type="button" data-bs-target="#carousel-new-{{ helmet.id }}" data-bs-slide="prev">
-                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                            <span class="visually-hidden">Previous</span>
-                                        </button>
-                                        <button class="carousel-control-next" type="button" data-bs-target="#carousel-new-{{ helmet.id }}" data-bs-slide="next">
-                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                            <span class="visually-hidden">Next</span>
-                                        </button>
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#carousel-new-{{ helmet.id }}" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#carousel-new-{{ helmet.id }}" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
                                     {% endif %}
                                 </div>
                             {% else %}
                                 <div class="text-center text-muted d-flex flex-column align-items-center justify-content-center h-100">
-                                    <i class="fas fa-helmet-safety fa-4x mb-2"></i>
-                                    <p>No Image</p>
+                                    <i class="fas fa-helmet-safety fa-4x mb-2"></i><p>No Image</p>
                                 </div>
                             {% endif %}
                         {% endwith %}
@@ -368,18 +340,40 @@
                     <div class="product-body">
                         <div class="product-brand">{{ helmet.brand.name }}</div>
                         <h5 class="product-name">{{ helmet.name }}</h5>
-                        <div class="product-price">NRs {{ helmet.get_price }}</div>
-                        <div class="mb-2">
-                            <span class="text-warning">
-                                {% for i in "12345" %}
-                                <i class="fas fa-star{% if forloop.counter > helmet.get_avg_rating %} text-muted{% endif %}" style="font-size: 0.8rem;"></i>
-                                {% endfor %}
-                            </span>
-                            <small class="text-muted">({{ helmet.reviews.count }})</small>
+                        <div class="product-price mb-2">
+                            NRs {{ helmet.get_price }}
+                            {% if helmet.discount_price %}<span class="old-price">NRs {{ helmet.price }}</span>{% endif %}
                         </div>
-                        <a href="{% url 'store:add_to_cart' helmet.id %}" class="btn btn-add-cart mt-2">
-                            <i class="fas fa-cart-plus me-1"></i>Add to Cart
-                        </a>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="text-warning">
+                                    {% for i in "12345" %}<i class="fas fa-star{% if forloop.counter > helmet.get_avg_rating %} text-muted{% endif %}" style="font-size: 0.8rem;"></i>{% endfor %}
+                                </span>
+                                <small class="text-muted">({{ helmet.reviews.count }})</small>
+                            </div>
+                            <small class="text-muted">{{ helmet.get_helmet_type_display }}</small>
+                        </div>
+                        <div class="product-actions">
+                            {% if helmet.is_coming_soon %}
+                                <button type="button" class="btn-card-cart coming-soon-btn" disabled>
+                                    <i class="fas fa-clock"></i> Coming Soon
+                                </button>
+                            {% elif helmet.stock > 0 %}
+                                <button type="button" class="btn-card-cart js-add-to-cart" data-helmet-id="{{ helmet.id }}">
+                                    <i class="fas fa-shopping-cart"></i> Add to Cart
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn-card-cart" disabled>
+                                    <i class="fas fa-times-circle"></i> Out of Stock
+                                </button>
+                            {% endif %}
+                            <button type="button" class="btn-icon-action btn-icon-compare js-toggle-compare" data-helmet-id="{{ helmet.id }}"><i class="fas fa-balance-scale"></i></button>
+                            {% if user.is_authenticated %}
+                            <button type="button" class="btn-icon-action btn-icon-wishlist js-toggle-wishlist {% if helmet.id in wishlist_ids %}active{% endif %}" data-helmet-id="{{ helmet.id }}">
+                                <i class="{% if helmet.id in wishlist_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -401,8 +395,7 @@
                 <div class="card border-0 rounded-4 shadow-sm h-100">
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center mb-3">
-                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" 
-                                 style="width: 45px; height: 45px; font-weight: 700;">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; font-weight: 700;">
                                 {{ review.user.first_name|default:review.user.username|first|upper }}
                             </div>
                             <div>
@@ -411,12 +404,10 @@
                             </div>
                         </div>
                         <div class="text-warning mb-2">
-                            {% for i in "12345" %}
-                            <i class="fas fa-star{% if forloop.counter > review.rating %} text-muted{% endif %}"></i>
-                            {% endfor %}
+                            {% for i in "12345" %}<i class="fas fa-star{% if forloop.counter > review.rating %} text-muted{% endif %}"></i>{% endfor %}
                         </div>
                         <p class="text-muted mb-3">"{{ review.comment|truncatechars:100 }}"</p>
-                        <div class="d-flex align-items-center">
+                        <a href="{% url 'store:helmet_detail' review.helmet.slug %}" class="d-flex align-items-center text-decoration-none">
                             {% with first_gallery_image=review.helmet.images.first %}
                                 {% if review.helmet.image %}
                                     <img src="{{ review.helmet.image.url }}" style="width: 40px; height: 40px; object-fit: contain;" class="me-2">
@@ -425,14 +416,12 @@
                                 {% endif %}
                             {% endwith %}
                             <small class="fw-bold text-dark">{{ review.helmet.brand.name }} {{ review.helmet.name }}</small>
-                        </div>
+                        </a>
                     </div>
                 </div>
             </div>
             {% empty %}
-            <div class="col-12 text-center">
-                <p class="text-muted">No reviews yet. Be the first to review after purchasing!</p>
-            </div>
+            <div class="col-12 text-center"><p class="text-muted">No reviews yet.</p></div>
             {% endfor %}
         </div>
     </div>
@@ -442,26 +431,10 @@
 <section class="py-5" style="background: linear-gradient(135deg, var(--dark) 0%, #16213e 100%);">
     <div class="container">
         <div class="row text-center text-white g-4">
-            <div class="col-md-3">
-                <i class="fas fa-shield-alt fa-3x mb-3" style="color: var(--primary);"></i>
-                <h5 class="fw-bold">Certified Safe</h5>
-                <p class="text-white-50 small">All helmets meet DOT, ECE, or SNELL standards</p>
-            </div>
-            <div class="col-md-3">
-                <i class="fas fa-truck fa-3x mb-3" style="color: var(--primary);"></i>
-                <h5 class="fw-bold">Free Shipping</h5>
-                <p class="text-white-50 small">On orders over $200</p>
-            </div>
-            <div class="col-md-3">
-                <i class="fas fa-undo fa-3x mb-3" style="color: var(--primary);"></i>
-                <h5 class="fw-bold">Easy Returns</h5>
-                <p class="text-white-50 small">30-day hassle-free returns</p>
-            </div>
-            <div class="col-md-3">
-                <i class="fas fa-headset fa-3x mb-3" style="color: var(--primary);"></i>
-                <h5 class="fw-bold">24/7 Support</h5>
-                <p class="text-white-50 small">Expert advice always available</p>
-            </div>
+            <div class="col-md-3"><i class="fas fa-shield-alt fa-3x mb-3" style="color: var(--primary);"></i><h5 class="fw-bold">Certified Safe</h5><p class="text-white-50 small">All helmets meet DOT, ECE, or SNELL standards</p></div>
+            <div class="col-md-3"><i class="fas fa-truck fa-3x mb-3" style="color: var(--primary);"></i><h5 class="fw-bold">Free Shipping</h5><p class="text-white-50 small">On orders over $200</p></div>
+            <div class="col-md-3"><i class="fas fa-undo fa-3x mb-3" style="color: var(--primary);"></i><h5 class="fw-bold">Easy Returns</h5><p class="text-white-50 small">30-day hassle-free returns</p></div>
+            <div class="col-md-3"><i class="fas fa-headset fa-3x mb-3" style="color: var(--primary);"></i><h5 class="fw-bold">24/7 Support</h5><p class="text-white-50 small">Expert advice always available</p></div>
         </div>
     </div>
 </section>
