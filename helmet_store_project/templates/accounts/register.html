@@ -1,30 +1,415 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 
-{% block title %}Sign Up - HelmetHub{% endblock %}
+{% block title %}Sign Up - HelmetHub Nepal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-page {
+        min-height: calc(100vh - 76px);
+        display: flex;
+        align-items: center;
+        padding: 40px 0;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    .auth-page::before {
+        content: '';
+        position: absolute;
+        top: -20%; right: -10%;
+        width: 600px; height: 600px;
+        background: radial-gradient(circle, rgba(255,107,53,0.18) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .auth-page::after {
+        content: '';
+        position: absolute;
+        bottom: -20%; left: -10%;
+        width: 500px; height: 500px;
+        background: radial-gradient(circle, rgba(0,212,170,0.12) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .auth-container {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+        max-width: 1050px;
+        margin: 0 auto;
+    }
+
+    /* Left visual panel */
+    .auth-visual {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        padding: 60px 40px;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+    .auth-visual::before {
+        content: '';
+        position: absolute;
+        top: -30px; right: -30px;
+        width: 200px; height: 200px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.08);
+    }
+    .auth-visual::after {
+        content: '';
+        position: absolute;
+        bottom: -50px; left: -50px;
+        width: 250px; height: 250px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+    }
+    .auth-visual-icon {
+        font-size: 5rem;
+        margin-bottom: 24px;
+        opacity: 0.95;
+    }
+    .auth-visual h2 {
+        font-weight: 800;
+        font-size: 2rem;
+        margin-bottom: 14px;
+        letter-spacing: -0.5px;
+    }
+    .auth-visual p {
+        font-size: 1rem;
+        opacity: 0.9;
+        line-height: 1.6;
+        margin-bottom: 30px;
+    }
+    .auth-visual-features {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .auth-visual-features li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        font-size: 0.9rem;
+        opacity: 0.95;
+    }
+    .auth-visual-features li i {
+        width: 24px; height: 24px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+    }
+
+    /* Form panel */
+    .auth-form-panel { padding: 50px 50px; }
+    .auth-form-header { margin-bottom: 26px; }
+    .auth-form-header h3 {
+        font-weight: 800;
+        font-size: 1.8rem;
+        color: var(--dark);
+        margin-bottom: 6px;
+    }
+    .auth-form-header p {
+        color: #6b7280;
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    /* Inputs */
+    .auth-input-group { position: relative; margin-bottom: 16px; }
+    .auth-input-group .input-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        font-size: 0.95rem;
+        z-index: 2;
+        transition: color 0.2s;
+    }
+    .auth-input-group input {
+        width: 100%;
+        padding: 13px 46px 13px 46px;
+        border: 2px solid #e5e7eb;
+        border-radius: 14px;
+        background: #f9fafb;
+        font-size: 0.95rem;
+        transition: all 0.25s;
+        color: var(--dark);
+    }
+    .auth-input-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: white;
+        box-shadow: 0 0 0 4px rgba(255,107,53,0.12);
+    }
+    .auth-input-group input:focus ~ .input-icon { color: var(--primary); }
+    .auth-input-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+
+    .btn-auth {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 14px;
+        font-weight: 700;
+        font-size: 1rem;
+        width: 100%;
+        transition: all 0.3s;
+        box-shadow: 0 10px 25px rgba(255,107,53,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        letter-spacing: 0.3px;
+        margin-top: 8px;
+    }
+    .btn-auth:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 32px rgba(255,107,53,0.45);
+        color: white;
+    }
+    .btn-auth:active { transform: translateY(0); }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+    .auth-footer a {
+        color: var(--primary);
+        font-weight: 700;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .auth-footer a:hover { color: var(--primary-dark); text-decoration: underline; }
+
+    /* ========== MESSAGE ALERTS — COLOR BY TYPE ========== */
+    .auth-message {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 13px 16px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+        font-weight: 500;
+        animation: slideDown 0.3s ease-out;
+    }
+    @keyframes slideDown {
+        from { transform: translateY(-10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .auth-message i {
+        font-size: 1.05rem;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+    .auth-message ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
+    }
+    .auth-message li { margin-bottom: 2px; }
+    /* Success — GREEN */
+    .auth-message.success {
+        background: #ecfdf5;
+        border-left: 4px solid #10b981;
+        color: #065f46;
+    }
+    .auth-message.success i { color: #10b981; }
+    /* Error — RED */
+    .auth-message.error,
+    .auth-message.danger {
+        background: #fef2f2;
+        border-left: 4px solid #dc3545;
+        color: #991b1b;
+    }
+    .auth-message.error i,
+    .auth-message.danger i { color: #dc3545; }
+    /* Warning — AMBER */
+    .auth-message.warning {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        color: #92400e;
+    }
+    .auth-message.warning i { color: #f59e0b; }
+    /* Info — BLUE */
+    .auth-message.info {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        color: #1e40af;
+    }
+    .auth-message.info i { color: #3b82f6; }
+
+    .auth-input-group .password-toggle-btn {
+        right: 14px;
+        top: 50%;
+    }
+
+    @media (max-width: 991px) {
+        .auth-visual { display: none; }
+        .auth-form-panel { padding: 40px 28px; }
+        .auth-form-header h3 { font-size: 1.5rem; }
+    }
+    @media (max-width: 576px) {
+        .auth-page { padding: 20px 0; }
+        .auth-form-panel { padding: 30px 22px; }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card border-0 rounded-4 shadow-lg overflow-hidden">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-user-plus fa-3x mb-3" style="color: var(--primary);"></i>
-                        <h3 class="fw-bold">Create Account</h3>
-                        <p class="text-muted">Join HelmetHub for exclusive deals</p>
+<div class="auth-page">
+    <div class="container auth-container">
+        <div class="auth-card">
+            <div class="row g-0">
+                <!-- Left: Visual Panel -->
+                <div class="col-lg-5">
+                    <div class="auth-visual">
+                        <div class="auth-visual-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h2>Join HelmetHub</h2>
+                        <p>Create your free account and unlock the best helmet shopping experience in Nepal.</p>
+                        <ul class="auth-visual-features">
+                            <li><i class="fas fa-check"></i> Free lifetime membership</li>
+                            <li><i class="fas fa-check"></i> Exclusive member-only discounts</li>
+                            <li><i class="fas fa-check"></i> Order tracking & history</li>
+                            <li><i class="fas fa-check"></i> Personalized recommendations</li>
+                        </ul>
                     </div>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        {{ form|crispy }}
-                        <button type="submit" class="btn btn-hero w-100 py-3 mt-3">Create Account</button>
-                    </form>
-                    
-                    <div class="text-center mt-3">
-                        <p class="text-muted mb-0">Already have an account? 
-                            <a href="{% url 'accounts:login' %}" style="color: var(--primary); font-weight: 600;">Sign in</a>
-                        </p>
+                </div>
+
+                <!-- Right: Form -->
+                <div class="col-lg-7">
+                    <div class="auth-form-panel">
+                        <div class="auth-form-header">
+                            <h3>Create Account</h3>
+                            <p>Fill in your details to get started</p>
+                        </div>
+
+                        <!-- ✅ Dynamic message alerts — color by type -->
+                        {% if messages %}
+                            {% for message in messages %}
+                            <div class="auth-message {{ message.tags }}">
+                                {% if message.tags == 'success' %}
+                                    <i class="fas fa-check-circle"></i>
+                                {% elif message.tags == 'error' %}
+                                    <i class="fas fa-exclamation-circle"></i>
+                                {% elif message.tags == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle"></i>
+                                {% endif %}
+                                <div>{{ message }}</div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Form errors — RED -->
+                        {% if form.errors %}
+                        <div class="auth-message error">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <div>
+                                <strong>Please fix the errors below:</strong>
+                                <ul>
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <form method="POST">
+                            {% csrf_token %}
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="auth-input-group">
+                                        <label>First Name</label>
+                                        <i class="fas fa-user input-icon"></i>
+                                        <input type="text" name="first_name" placeholder="Your First Name" 
+                                               value="{{ form.first_name.value|default:'' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="auth-input-group">
+                                        <label>Last Name</label>
+                                        <i class="fas fa-user input-icon"></i>
+                                        <input type="text" name="last_name" placeholder="Your Last Name" 
+                                               value="{{ form.last_name.value|default:'' }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="auth-input-group">
+                                <label>Username</label>
+                                <i class="fas fa-at input-icon"></i>
+                                <input type="text" name="username" placeholder="Choose a unique username" required 
+                                       value="{{ form.username.value|default:'' }}">
+                            </div>
+
+                            <div class="auth-input-group">
+                                <label>Email Address</label>
+                                <i class="fas fa-envelope input-icon"></i>
+                                <input type="email" name="email" placeholder="you@example.com" required 
+                                       value="{{ form.email.value|default:'' }}">
+                            </div>
+
+                            <div class="auth-input-group">
+                                <label>Password</label>
+                                <i class="fas fa-lock input-icon"></i>
+                                <div class="password-wrapper">
+                                    <input type="password" name="password1" placeholder="Create a strong password" required>
+                                    <button type="button" class="password-toggle-btn" title="Show password">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="auth-input-group">
+                                <label>Confirm Password</label>
+                                <i class="fas fa-lock input-icon"></i>
+                                <div class="password-wrapper">
+                                    <input type="password" name="password2" placeholder="Re-enter your password" required>
+                                    <button type="button" class="password-toggle-btn" title="Show password">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-auth">
+                                <i class="fas fa-user-plus"></i> Create Account
+                            </button>
+                        </form>
+
+                        <div class="auth-footer">
+                            Already have an account?
+                            <a href="{% url 'accounts:login' %}">Login here</a>
+                        </div>
                     </div>
                 </div>
             </div>

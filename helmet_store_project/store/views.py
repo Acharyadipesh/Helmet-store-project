@@ -149,7 +149,6 @@ def helmet_detail(request, slug):
 def add_to_cart(request, helmet_id):
     helmet = get_object_or_404(Helmet, id=helmet_id)
 
-    # ✅ Safety: block coming-soon items
     if helmet.is_coming_soon:
         return JsonResponse({
             'success': False,
