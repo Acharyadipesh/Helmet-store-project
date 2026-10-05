@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.utils.crypto import get_random_string
 from django.conf import settings
 from django.db import transaction, IntegrityError
+from django.views.decorators.cache import never_cache
 from store.models import Cart
 from .models import Order, OrderItem
 
@@ -32,10 +33,12 @@ def checkout_view(request):
 
         try:
             with transaction.atomic():
+                # ✅ Re-fetch items with select_for_update to prevent race conditions
                 cart_items = list(
                     cart.items.select_related('helmet').select_for_update()
                 )
 
+                # ✅ Step 1: Validate stock for ALL items
                 for item in cart_items:
                     if item.quantity > item.helmet.stock:
                         messages.error(
@@ -44,6 +47,7 @@ def checkout_view(request):
                         )
                         return redirect('store:cart_detail')
 
+                # ✅ Step 2: Create the order
                 order = Order.objects.create(
                     user=request.user,
                     order_id=get_random_string(10).upper(),
@@ -57,6 +61,8 @@ def checkout_view(request):
                     total_amount=cart.get_total(),
                 )
 
+                # ✅ Step 3: Create order items AND reduce stock
+                #    This runs for COD and online payments the SAME way.
                 for item in cart_items:
                     OrderItem.objects.create(
                         order=order,
@@ -65,15 +71,18 @@ def checkout_view(request):
                         price=item.helmet.get_price(),
                     )
 
+                    # Reduce stock
                     helmet = item.helmet
                     old_stock = helmet.stock
                     helmet.stock = old_stock - item.quantity
                     helmet.save(update_fields=['stock'])
 
+                    # 🔍 DEBUG: See this in the terminal
                     print(f"\n🛒 STOCK UPDATE | {helmet.name}")
                     print(f"   Before: {old_stock} → After: {helmet.stock} (qty: {item.quantity})")
                     print(f"   Payment: {payment_method}\n")
 
+                # ✅ Step 4: Clear the cart
                 cart.items.all().delete()
 
         except IntegrityError as e:
@@ -81,6 +90,7 @@ def checkout_view(request):
             messages.error(request, 'Stock error occurred. Please try again.')
             return redirect('store:cart_detail')
 
+        # ==================== ROUTE BY PAYMENT METHOD ====================
         if payment_method == 'cod':
             messages.success(
                 request,
@@ -110,6 +120,7 @@ def order_detail_view(request, order_id):
 
 # ==================== PAYMENT ROUTER ====================
 @login_required
+@never_cache
 def initiate_payment_view(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
 
@@ -224,17 +235,20 @@ def khalti_callback_view(request):
 # ==================== ESEWA ====================
 def initiate_esewa_payment_form(request, order):
     esewa_url = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-    total_amount = str(order.total_amount)
+
+    # ✅ Strip whitespace from env values (trailing \n breaks the signature)
+    product_code = settings.ESEWA_MERCHANT_CODE.strip()
+    secret_key = settings.ESEWA_SECRET_KEY.strip()
+
+    # ✅ Force 2-decimal format to match eSewa's expected format exactly
+    total_amount = f"{float(order.total_amount):.2f}"
     tax_amount = "0.00"
     product_service_charge = "0.00"
     product_delivery_charge = "0.00"
-    product_code = settings.ESEWA_MERCHANT_CODE
-    secret_key = settings.ESEWA_SECRET_KEY
 
-    # ✅ BULLETPROOF: UUID4 is guaranteed unique EVERY time
-    # Format: RMXUXMYUEB_abc123def4 (10-char hex)
-    unique_suffix = uuid.uuid4().hex[:10]
-    transaction_uuid = f"{order.order_id}_{unique_suffix}"
+    # ✅ CRITICAL: Unique transaction UUID for EVERY attempt.
+    #    Using order.order_id alone caused the "Duplicate transaction UUID" error.
+    transaction_uuid = f"{order.order_id}_{uuid.uuid4().hex[:10]}"
 
     signed_field_names = "total_amount,transaction_uuid,product_code"
     message = (
@@ -253,9 +267,12 @@ def initiate_esewa_payment_form(request, order):
 
     print("\n" + "=" * 60)
     print("📍 ESEWA INITIATE")
-    print(f"   Order ID: {order.order_id}")
+    print(f"   Order ID:         {order.order_id}")
     print(f"   Transaction UUID: {transaction_uuid}")
-    print(f"   Total Amount: {total_amount}")
+    print(f"   Total Amount:     {total_amount!r}")
+    print(f"   Product Code:     {product_code!r}")
+    print(f"   Secret Key:       {secret_key!r}")
+    print(f"   Signature:        {signature}")
     print("=" * 60 + "\n")
 
     context = {
@@ -290,15 +307,15 @@ def esewa_callback_view(request):
         messages.error(request, f'Error parsing eSewa response: {str(e)}')
         return redirect('store:home')
 
-    transaction_uuid = data.get('transaction_uuid')
+    transaction_uuid = data.get('transaction_uuid', '')
     status = data.get('status')
     signature_from_esewa = data.get('signature')
     signed_field_names = data.get('signed_field_names', '')
 
-    # ✅ Extract the original order_id (strip "_uuid" suffix)
+    # ✅ Extract original order ID (strip "_hexsuffix")
     order_id = transaction_uuid.split('_')[0] if '_' in transaction_uuid else transaction_uuid
 
-    secret_key = settings.ESEWA_SECRET_KEY
+    secret_key = settings.ESEWA_SECRET_KEY.strip()
     field_names = signed_field_names.split(',')
     message_parts = []
     for field in field_names:
@@ -339,3 +356,10 @@ def esewa_callback_view(request):
         messages.error(request, f'Payment failed. Status: {status}')
 
     return redirect('orders:order_detail', order_id=order_id)
+
+
+@login_required
+def esewa_failure_view(request):
+    """Handle eSewa failure redirect (eSewa sends NO data param here)."""
+    messages.error(request, 'eSewa payment was cancelled or failed. Please try again.')
+    return redirect('store:cart_detail')

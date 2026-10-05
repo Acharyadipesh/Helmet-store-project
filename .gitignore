@@ -27,3 +27,12 @@ test_khalti.py
 # OS
 .DS_Store
 Thumbs.db
+
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Secret test files
+test_khalti.py
