@@ -34,5 +34,3 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Secret test files
-test_khalti.py
