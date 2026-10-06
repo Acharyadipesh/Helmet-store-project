@@ -16,7 +16,7 @@ venv/
 env/
 ENV/
 
-# Secret test files (NEVER commit keys!)
+# Secret test files
 test_khalti.py
 
 # IDE
